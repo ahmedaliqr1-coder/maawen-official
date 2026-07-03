@@ -49,6 +49,10 @@ app.get('/admin', (req, res) => {
 // Initialize database
 async function initializeDatabase() {
   try {
+    // Test connection first
+    await pool.query('SELECT 1');
+    console.log('Database connected successfully');
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
@@ -74,9 +78,10 @@ async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('Database initialized successfully');
+    console.log('Database tables initialized successfully');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Error initializing database:', error.message);
+    throw error;
   }
 }
 
@@ -313,13 +318,13 @@ app.get('*', (req, res) => {
 });
 
 // Initialize and start server
-initializeDatabase().then(() => {
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}).catch(error => {
+initializeDatabase().catch(error => {
   console.error('Failed to initialize database:', error);
-  process.exit(1);
+  console.log('Continuing without database initialization...');
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Graceful shutdown
