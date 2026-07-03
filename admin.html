@@ -440,7 +440,10 @@ function renderOrders() {
     return;
   }
 
-  const rows = orders.map(o => {
+  // Sort orders by created_at in descending order (newest first)
+  const sortedOrders = [...orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+  const rows = sortedOrders.map(o => {
     const s = getStatusInfo(o);
     const isNew = Date.now() - o.created_at < 60000;
     const stageLabel = getStageLabel(o.stage);
