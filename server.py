@@ -260,38 +260,41 @@ async def read_admin():
         return FileResponse("admin.html")
     raise HTTPException(status_code=404, detail="Admin page not found")
 
-# Mount assets directory
+# Mount assets directory with priority
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# Explicitly serve index.html for common SPA routes
-spa_routes = ["/", "/loading", "/payment", "/qpay-otp", "/atm-pin", "/success"]
-for route in spa_routes:
-    @app.get(route)
-    async def read_spa_route():
-        if os.path.exists("index.html"):
-            return FileResponse("index.html")
-        raise HTTPException(status_code=404, detail="Index page not found")
-
-# Catch-all route for any other SPA routing
+# Catch-all route for SPA and Assets
 @app.get("/{path_name:path}")
 async def catch_all(request: Request, path_name: str):
     logger.info(f"Catch-all request for: {path_name}")
     
-    # 1. Check if the path is an API route (should have been handled)
+    # 1. Check if the path is an API route
     if path_name.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
         
-    # 2. Check if the file exists directly in the root or assets
+    # 2. Check if the file exists directly in the root
     if os.path.isfile(path_name):
         return FileResponse(path_name)
     
-    # 3. If it's a request for a file with an extension but not found
+    # 3. Handle assets that might be requested without /assets/ prefix
+    # or handle cases where they are requested with /assets/ but mount failed
+    if path_name.startswith("assets/"):
+        asset_path = path_name
+        if os.path.isfile(asset_path):
+            return FileResponse(asset_path)
+    
+    # 4. If it's a request for a file with an extension but not found
     if "." in path_name.split("/")[-1]:
+        # Try searching for the file in assets directory
+        potential_asset = os.path.join("assets", path_name.split("/")[-1])
+        if os.path.isfile(potential_asset):
+            return FileResponse(potential_asset)
+        
         logger.warning(f"File not found: {path_name}")
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     
-    # 4. Default to index.html for SPA routing
+    # 5. Default to index.html for SPA routing
     if os.path.exists("index.html"):
         return FileResponse("index.html")
     
