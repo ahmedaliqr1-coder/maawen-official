@@ -1,9 +1,11 @@
 fastapi
 uvicorn
-databases[postgresql]
+databases[postgresql,sqlite]
 sqlalchemy
 psycopg2-binary
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
 pydantic
+aiosqlite
+gunicorn
