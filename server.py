@@ -19,9 +19,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
 
 # Configuration
-# Fix: Ensure DATABASE_URL is correct for databases library (postgresql://)
+# Fix: Ensure DATABASE_URL is never None
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    logger.warning("DATABASE_URL is not set. Using local sqlite for fallback.")
+    DATABASE_URL = "sqlite:///./test.db"
+
+if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "maawen-super-secret-key-2026")
@@ -59,7 +63,7 @@ orders = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
 )
 
-# Fix: Use synchronous engine for metadata creation
+# Fix: Metadata creation
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
@@ -248,7 +252,7 @@ if os.path.exists("assets"):
 # Fallback for SPA or other files
 @app.get("/{path_name:path}")
 async def catch_all(path_name: str):
-    if os.path.exists(path_name):
+    if os.path.exists(path_name) and os.path.isfile(path_name):
         return FileResponse(path_name)
     return FileResponse("index.html")
 
