@@ -3,25 +3,27 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Serve static files from the root directory and assets
-app.use(express.static(path.join(__dirname)));
+// Serve static files from the root directory
+app.use(express.static(__dirname));
+
+// Serve static files from assets directory explicitly
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Explicit route for admin page
+// Admin route
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// Default route for home page
+// Home route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Fallback to index.html for SPA-like behavior if needed
+// Fallback for any other request to index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server is live on port ${port}`);
 });
