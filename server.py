@@ -253,32 +253,47 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+# Serve Admin Page
 @app.get("/admin")
 async def read_admin():
-    return FileResponse("admin.html")
+    if os.path.exists("admin.html"):
+        return FileResponse("admin.html")
+    raise HTTPException(status_code=404, detail="Admin page not found")
 
+# Mount assets directory
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
+# Serve Index Page
 @app.get("/")
 async def read_index():
-    return FileResponse("index.html")
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    raise HTTPException(status_code=404, detail="Index page not found")
 
+# Catch-all route for SPA
 @app.get("/{path_name:path}")
 async def catch_all(request: Request, path_name: str):
     logger.info(f"Catch-all request for: {path_name}")
     
-    # Check if the file exists directly
+    # 1. Check if the path is an API route (should have been handled, but for safety)
+    if path_name.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+        
+    # 2. Check if the file exists directly in the root or assets
     if os.path.isfile(path_name):
         return FileResponse(path_name)
     
-    # If it's a request for a file with an extension but not found
+    # 3. If it's a request for a file with an extension but not found
     if "." in path_name.split("/")[-1]:
         logger.warning(f"File not found: {path_name}")
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     
-    # Default to index.html for SPA routing
-    return FileResponse("index.html")
+    # 4. Default to index.html for SPA routing (e.g. /payment, /loading, etc.)
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    
+    raise HTTPException(status_code=404, detail="Page not found")
 
 if __name__ == "__main__":
     import uvicorn
