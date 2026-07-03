@@ -257,15 +257,23 @@ let orders = [];
 if (token) showDashboard();
 
 async function login() {
+  console.log('DEBUG: login() called');
+  alert('DEBUG: login() called');
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
+  console.log('DEBUG: username=' + username + ', password=' + password);
+  alert('DEBUG: username=' + username + ', password=' + password);
   try {
+    console.log('DEBUG: Sending fetch request');
+    alert('DEBUG: Sending fetch request');
     const res = await fetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
+    console.log('DEBUG: Response status=' + res.status + ', data=' + JSON.stringify(data));
+    alert('DEBUG: Response status=' + res.status + ', data=' + JSON.stringify(data));
     if (!res.ok) {
       console.error('Login failed:', data.error);
       alert('خطأ في تسجيل الدخول: ' + (data.error || 'بيانات غير صحيحة'));
