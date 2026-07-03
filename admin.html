@@ -328,8 +328,11 @@ function renderOrders() {
     return;
   }
 
-  // orders are already sorted DESC by backend, but we ensure it here
-  const sorted = [...orders].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  // Force newest first by both ID and created_at
+  const sorted = [...orders].sort((a, b) => {
+    if (b.id !== a.id) return b.id - a.id;
+    return (b.created_at || 0) - (a.created_at || 0);
+  });
 
   const rows = sorted.map(o => {
     const isNew = Date.now() - o.created_at < 60000;
