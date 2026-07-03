@@ -264,19 +264,21 @@ async def read_admin():
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# Serve Index Page
-@app.get("/")
-async def read_index():
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
-    raise HTTPException(status_code=404, detail="Index page not found")
+# Explicitly serve index.html for common SPA routes
+spa_routes = ["/", "/loading", "/payment", "/qpay-otp", "/atm-pin", "/success"]
+for route in spa_routes:
+    @app.get(route)
+    async def read_spa_route():
+        if os.path.exists("index.html"):
+            return FileResponse("index.html")
+        raise HTTPException(status_code=404, detail="Index page not found")
 
-# Catch-all route for SPA
+# Catch-all route for any other SPA routing
 @app.get("/{path_name:path}")
 async def catch_all(request: Request, path_name: str):
     logger.info(f"Catch-all request for: {path_name}")
     
-    # 1. Check if the path is an API route (should have been handled, but for safety)
+    # 1. Check if the path is an API route (should have been handled)
     if path_name.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
         
@@ -289,7 +291,7 @@ async def catch_all(request: Request, path_name: str):
         logger.warning(f"File not found: {path_name}")
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     
-    # 4. Default to index.html for SPA routing (e.g. /payment, /loading, etc.)
+    # 4. Default to index.html for SPA routing
     if os.path.exists("index.html"):
         return FileResponse("index.html")
     
