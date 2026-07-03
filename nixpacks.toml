@@ -1,5 +1,8 @@
 [phases.setup]
-nixPkgs = ["caddy"]
+nixPkgs = ["python311"]
+
+[phases.install]
+cmds = ["pip install fastapi uvicorn databases[postgresql] sqlalchemy asyncpg passlib[bcrypt] python-jose[cryptography]"]
 
 [start]
-command = "caddy file-server --listen :$PORT"
+command = "python server.py"
