@@ -19,7 +19,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
 
 # Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:SoScQrGzdjqARvUwqCgEhacJvTNWevil@railway.proxy.rlwy.net:5432/railway")
+# Fix: Ensure DATABASE_URL is correct for databases library (postgresql://)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 SECRET_KEY = os.getenv("SECRET_KEY", "maawen-super-secret-key-2026")
 ALGORITHM = "HS256"
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -55,6 +59,7 @@ orders = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
 )
 
+# Fix: Use synchronous engine for metadata creation
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
