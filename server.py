@@ -256,13 +256,18 @@ async def websocket_endpoint(websocket: WebSocket):
 # Serve Admin Page
 @app.get("/admin")
 async def read_admin():
-    if os.path.exists("admin.html"):
-        return FileResponse("admin.html")
+    admin_path = os.path.join(os.path.dirname(__file__), "admin.html")
+    if os.path.exists(admin_path):
+        return FileResponse(admin_path)
     raise HTTPException(status_code=404, detail="Admin page not found")
 
 # Mount assets directory with priority
-if os.path.exists("assets"):
-    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+assets_path = os.path.join(os.path.dirname(__file__), "assets")
+if os.path.exists(assets_path):
+    logger.info(f"Mounting assets from: {assets_path}")
+    app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+else:
+    logger.warning(f"Assets directory not found at: {assets_path}")
 
 # Catch-all route for SPA and Assets
 @app.get("/{path_name:path}")
@@ -299,8 +304,9 @@ async def catch_all(request: Request, path_name: str):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     
     # 6. Default to index.html for SPA routing
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     
     raise HTTPException(status_code=404, detail="Page not found")
 
