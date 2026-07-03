@@ -2,4 +2,4 @@
 nixPkgs = ["caddy"]
 
 [start]
-command = "caddy run --config Caddyfile --adapter caddyfile"
+command = "caddy file-server --root . --listen :$PORT"
