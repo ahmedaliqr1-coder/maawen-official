@@ -1,0 +1,12 @@
+{
+  "name": "maawen-static",
+  "version": "1.0.0",
+  "description": "Static site for Maawen",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
