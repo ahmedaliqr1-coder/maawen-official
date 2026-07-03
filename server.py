@@ -252,6 +252,17 @@ async def websocket_endpoint(websocket: WebSocket, admin: Optional[int] = 0):
         manager.disconnect(websocket)
 
 # Serve static files
+# Priority: explicit routes for main HTML files to avoid conflicts
+from fastapi.responses import FileResponse
+
+@app.get("/")
+async def read_index():
+    return FileResponse("index.html")
+
+@app.get("/admin")
+async def read_admin():
+    return FileResponse("admin.html")
+
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
