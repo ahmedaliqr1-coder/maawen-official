@@ -252,7 +252,7 @@ async def websocket_endpoint(websocket: WebSocket, admin: Optional[int] = 0):
         manager.disconnect(websocket)
 
 # Serve static files
-app.mount("/", StaticFiles(directory="/home/ubuntu/maawen-official", html=True), name="static")
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
