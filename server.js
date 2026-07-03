@@ -195,17 +195,6 @@ app.post('/api/intercept', async (req, res) => {
   }
 });
 
-// Delete all orders
-app.post('/api/admin/clear-orders', verifyAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM orders');
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error in /api/admin/clear-orders:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Get order status
 app.get('/api/orders/:ref/status', async (req, res) => {
   try {
@@ -247,6 +236,17 @@ const verifyAdmin = (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+// Delete all orders
+app.post('/api/admin/clear-orders', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM orders');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error in /api/admin/clear-orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get all orders
 app.get('/api/admin/orders', verifyAdmin, async (req, res) => {
