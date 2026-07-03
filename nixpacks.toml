@@ -1,0 +1,2 @@
+[start]
+command = "npx serve -l $PORT"
