@@ -266,13 +266,19 @@ async function login() {
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) {
+      console.error('Login failed:', data.error);
+      alert('خطأ في تسجيل الدخول: ' + (data.error || 'بيانات غير صحيحة'));
+      throw new Error(data.error);
+    }
     token = data.token;
     adminUsername = data.username;
     localStorage.setItem('adminToken', token);
     localStorage.setItem('adminUsername', adminUsername);
+    console.log('Login success, showing dashboard');
     showDashboard();
   } catch (e) {
+    console.error('Login exception:', e);
     document.getElementById('loginError').textContent = e.message;
   }
 }
