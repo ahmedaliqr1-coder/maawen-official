@@ -37,19 +37,19 @@ app.get('/payment-interceptor.js', (req, res) => res.sendFile(path.join(__dirnam
 app.get('/payment-flow.js', (req, res) => res.sendFile(path.join(__dirname, 'payment-flow.js')));
 
 // Serve static files from the assets directory
-app.use('/assets', express.static(path.join(__dirname, 'assets'), {
+app.use(express.static(path.join(__dirname, 'dist'), {
   maxAge: '1d',
   etag: false
 }));
 
 // Serve index.html for the root path
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Serve admin.html
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'admin.html'));
 });
 
 // Initialize database
@@ -373,7 +373,7 @@ wss.on('connection', (ws, req) => {
 
 // SPA routing - serve index.html for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 // Initialize and start server
