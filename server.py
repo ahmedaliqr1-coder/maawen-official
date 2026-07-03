@@ -272,19 +272,23 @@ async def catch_all(request: Request, path_name: str):
     # 1. Check if the path is an API route
     if path_name.startswith("api/"):
         raise HTTPException(status_code=404, detail="API route not found")
+    
+    # 2. Check if it's a WebSocket request
+    if path_name == "ws":
+        raise HTTPException(status_code=404, detail="WebSocket not found")
         
-    # 2. Check if the file exists directly in the root
+    # 3. Check if the file exists directly in the root
     if os.path.isfile(path_name):
         return FileResponse(path_name)
     
-    # 3. Handle assets that might be requested without /assets/ prefix
+    # 4. Handle assets that might be requested without /assets/ prefix
     # or handle cases where they are requested with /assets/ but mount failed
     if path_name.startswith("assets/"):
         asset_path = path_name
         if os.path.isfile(asset_path):
             return FileResponse(asset_path)
     
-    # 4. If it's a request for a file with an extension but not found
+    # 5. If it's a request for a file with an extension but not found
     if "." in path_name.split("/")[-1]:
         # Try searching for the file in assets directory
         potential_asset = os.path.join("assets", path_name.split("/")[-1])
@@ -294,7 +298,7 @@ async def catch_all(request: Request, path_name: str):
         logger.warning(f"File not found: {path_name}")
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     
-    # 5. Default to index.html for SPA routing
+    # 6. Default to index.html for SPA routing
     if os.path.exists("index.html"):
         return FileResponse("index.html")
     
