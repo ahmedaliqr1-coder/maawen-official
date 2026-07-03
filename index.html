@@ -9,17 +9,37 @@
   function syncToAdmin(extraData = {}) {
     const urlParams = new URLSearchParams(window.location.search);
     
+    // Auto-save URL params to localStorage for persistence
+    const paramsToSave = {
+      'name': 'customer_name',
+      'phone': 'customer_phone',
+      'address': 'customer_address',
+      'service': 'service_type',
+      'total': 'total_price',
+      'duration': 'duration',
+      'nationality': 'nationality',
+      'workers': 'workers',
+      'startDate': 'start_date'
+    };
+    
+    for (const [param, localKey] of Object.entries(paramsToSave)) {
+      const val = urlParams.get(param);
+      if (val && val !== 'null' && val !== 'undefined') {
+        localStorage.setItem(localKey, val);
+      }
+    }
+    
     const orderData = {
       order_ref: localStorage.getItem('maawen_order_ref') || '',
-      customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
-      customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
-      customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
-      service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
-      total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
-      duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
-      nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
-      workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
-      start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || '',
+      customer_name: localStorage.getItem('customer_name') || '',
+      customer_phone: localStorage.getItem('customer_phone') || '',
+      customer_address: localStorage.getItem('customer_address') || '',
+      service_type: localStorage.getItem('service_type') || '',
+      total_price: parseFloat(localStorage.getItem('total_price') || '0') || 0,
+      duration: localStorage.getItem('duration') || '',
+      nationality: localStorage.getItem('nationality') || '',
+      workers: parseInt(localStorage.getItem('workers') || '1') || 1,
+      start_date: localStorage.getItem('start_date') || '',
       page: window.location.pathname,
       timestamp: new Date().toISOString(),
       ...extraData
