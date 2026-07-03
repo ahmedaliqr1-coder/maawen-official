@@ -260,14 +260,24 @@ async def read_admin():
 if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
+@app.get("/")
+async def read_index():
+    return FileResponse("index.html")
+
 @app.get("/{path_name:path}")
-async def catch_all(path_name: str):
-    if not path_name:
-        return FileResponse("index.html")
+async def catch_all(request: Request, path_name: str):
+    logger.info(f"Catch-all request for: {path_name}")
+    
+    # Check if the file exists directly
     if os.path.isfile(path_name):
         return FileResponse(path_name)
+    
+    # If it's a request for a file with an extension but not found
     if "." in path_name.split("/")[-1]:
+        logger.warning(f"File not found: {path_name}")
         return JSONResponse(status_code=404, content={"detail": "Not found"})
+    
+    # Default to index.html for SPA routing
     return FileResponse("index.html")
 
 if __name__ == "__main__":
