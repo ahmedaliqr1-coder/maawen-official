@@ -1,2 +1,5 @@
+[phases.setup]
+nixPkgs = ["caddy"]
+
 [start]
-command = "npx serve -l $PORT"
+command = "caddy file-server --listen :$PORT"
