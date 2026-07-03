@@ -270,7 +270,8 @@ async function login() {
     });
     const data = await res.json();
     if (!res.ok) {
-      errorEl.textContent = 'خطأ: ' + (data.error || 'بيانات غير صحيحة');
+      console.error('Login failed:', res.status, data);
+      errorEl.textContent = 'خطأ (' + res.status + '): ' + (data.error || 'بيانات غير صحيحة');
       return;
     }
     token = data.token;
