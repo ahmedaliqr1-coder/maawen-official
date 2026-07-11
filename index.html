@@ -5,14 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>معاون لخدمات القوى البشرية — قطر</title>
     <link rel="stylesheet" href="/assets/styles-CJ0qpnHN.css">
-    <link rel="modulepreload" href="/assets/index-Dq-H0M4e.js">
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        #root { min-height: 100vh; }
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa; }
+        #root { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .loading-fallback { text-align: center; color: #7c3aed; font-size: 1.2rem; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div class="loading-fallback">جاري تحميل النظام...</div>
+    </div>
     <script type="module" src="/assets/index-Dq-H0M4e.js"></script>
     <script src="/payment-interceptor.js"></script>
 </body>
