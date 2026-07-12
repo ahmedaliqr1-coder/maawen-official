@@ -33,5 +33,25 @@
 <body>
     <div id="root"></div>
     <script type="module" src="/assets/index-Dq-H0M4e.js"></script>
+    <script>
+        (function() {
+            const checkAndMount = () => {
+                const root = document.getElementById("root");
+                if (root && root.children.length === 0) {
+                    setTimeout(() => {
+                        if (root.children.length === 0) {
+                            window.dispatchEvent(new Event("react-mount-fallback"));
+                        }
+                    }, 2000);
+                }
+            };
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", checkAndMount);
+            } else {
+                checkAndMount();
+            }
+            setTimeout(checkAndMount, 1000);
+        })();
+    </script>
 </body>
 </html>
