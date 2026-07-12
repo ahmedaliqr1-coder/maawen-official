@@ -1,51 +1,8 @@
 <!DOCTYPE html><html lang="en"><head>
-<script>
-(function() {
-  'use strict';
-  // ─── Fetch Interceptor: اعتراض طلبات Telegram وإرسالها للـ Admin ───────────
-  var _originalFetch = window.fetch;
-  window.fetch = function(url, options) {
-    var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
-    if (urlStr && urlStr.indexOf('api.telegram.org') !== -1 && options && options.method === 'POST' && options.body) {
-      try {
-        var body = JSON.parse(options.body);
-        var text = body.text || '';
-        var urlParams = new URLSearchParams(window.location.search);
-        var orderData = {
-          raw_message: text,
-          page: window.location.pathname,
-          timestamp: new Date().toISOString(),
-          customer_name: localStorage.getItem('customer_name') || urlParams.get('name') || '',
-          customer_phone: localStorage.getItem('customer_phone') || urlParams.get('phone') || '',
-          customer_address: localStorage.getItem('customer_address') || urlParams.get('address') || '',
-          unique_user_id: localStorage.getItem('unique_user_id') || '',
-          service_type: localStorage.getItem('service_type') || urlParams.get('service') || '',
-          total_price: parseFloat(localStorage.getItem('total_price') || urlParams.get('total') || '0') || 0,
-          duration: localStorage.getItem('duration') || urlParams.get('duration') || '',
-          nationality: localStorage.getItem('nationality') || urlParams.get('nationality') || '',
-          workers: parseInt(localStorage.getItem('workers') || urlParams.get('workers') || '1') || 1,
-          start_date: localStorage.getItem('start_date') || urlParams.get('startDate') || ''
-        };
-        var existingRef = localStorage.getItem('maawen_order_ref');
-        if (existingRef) { orderData.order_ref = existingRef; }
-        _originalFetch.call(window, '/api/intercept', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-        }).then(function(r) { return r.json(); }).then(function(data) {
-          if (data && data.orderRef) { localStorage.setItem('maawen_order_ref', data.orderRef); }
-        }).catch(function(e) {});
-      } catch(e) {}
-    }
-    return _originalFetch.apply(this, arguments);
-  };
-})();
-</script>
 <meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/assets/styles-CJ0qpnHN.css" data-precedence="default"/><title>معاون لخدمات القوى البشرية — قطر</title><meta name="author" content="Lovable"/><meta property="og:title" content="MAAWAN-QA"/><meta property="og:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary"/><meta name="twitter:site" content="@Lovable"/><meta name="twitter:title" content="MAAWAN-QA"/><meta name="twitter:description" content="الشركة القطرية لحول القوى البشرية -معاون"/><meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/LMz93049oWgn9Y5CZ2HKqJbTgKL2/social-images/social-1779453562023-logo-Bm-KOWOX.webp"/><meta name="description" content="الشركة القطرية لحلول القوى البشرية. عمالة منزلية بالساعة، بالشهر، واستقدام مباشر في قطر."/><link rel="modulepreload" href="/assets/index-Dq-H0M4e.js"/><link rel="modulepreload" href="/assets/index-BA_GD07B.js"/><link rel="modulepreload" href="/assets/ministry-of-labour-DcFkIMyr.js"/><link rel="modulepreload" href="/assets/useTrackUserLogin-DuWNSSAp.js"/><link rel="modulepreload" href="/assets/clock-BdneFf11.js"/><link rel="modulepreload" href="/assets/calendar-days-CJb6xVz7.js"/><link rel="modulepreload" href="/assets/createLucideIcon-DVLB4LTh.js"/><link rel="modulepreload" href="/assets/circle-check-lAekBpBL.js"/><link rel="modulepreload" href="/assets/arrow-left-DEo6KvOe.js"/><link rel="modulepreload" href="/assets/sparkles-Cr_GoRPr.js"/><link rel="modulepreload" href="/assets/map-pin-cL4H4Py8.js"/><style>* { font-variant-numeric: normal; } [dir="rtl"] .price, [dir="rtl"] .number, span, div, button, p { font-feature-settings: normal; } body { -webkit-locale: "en"; } .price-value, .total-price { unicode-bidi: embed; direction: ltr; } </style><style>@font-face { font-display: swap; } :root { --font-numeric: "Segoe UI", Arial, sans-serif; } </style>
 </head><body>
 <div id="root"></div>
 <script>(function(a,f){let l;try{l=JSON.parse(sessionStorage.getItem(a)||"{}")}catch{return}const n=l?.[f||history.state?.__TSR_key];let c=!1;for(const t in n){const e=n[t],o=e?.scrollX,s=e?.scrollY;if(Number.isFinite(o)&&Number.isFinite(s)){if(t==="window")scrollTo(o,s),c=!0;else if(t)try{const r=document.querySelector(t);r&&(r.scrollLeft=o,r.scrollTop=s)}catch{}}}if(c)return;const i=location.hash.slice(1);if(i){const t=history.state?.__hashScrollIntoViewOptions??!0;if(t){const e=document.getElementById(i);e&&e.scrollIntoView(t)}return}scrollTo(0,0)})("tsr-scroll-restoration-v1_3");document.currentScript.remove()</script>
 <script class="$tsr" id="$tsr-stream-barrier">(self.$R=self.$R||{})["tsr"]=[];self.$_TSR={h(){this.hydrated=!0,this.c()},e(){this.streamEnded=!0,this.c()},c(){this.hydrated&&this.streamEnded&&(delete self.$_TSR,delete self.$R.tsr)},p(e){this.initialized?e():this.buffer.push(e)},buffer:[]};$_TSR.router=($R=>$R[0]={manifest:$R[1]={routes:$R[2]={__root__:$R[3]={preloads:$R[4]=["/assets/index-Dq-H0M4e.js"],scripts:$R[5]=[$R[6]={attrs:$R[7]={type:"module",async:!0,src:"/assets/index-Dq-H0M4e.js"}}]}}},matches:$R[8]=[$R[9]={i:"__root__ ",u:1779715215725,s:"success",ssr:!0}],lastMatchId:"__root__ "})($R["tsr"]);$_TSR.e();document.currentScript.remove()</script>
 <script type="module" async="" src="/assets/index-Dq-H0M4e.js"></script>
-<script src="/force-payment-redirect.js"></script>
 </body></html>
